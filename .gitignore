@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.pnpm-store/
+_backup_initial_root_before_v2/
+changdong-garden-v1/
+portable-current-data.json
+public/portable-current-data.json
+.env
+.env.local
+*.tsbuildinfo
+vite-dev*.log
+vite.config.js
+vite.config.d.ts
