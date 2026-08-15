@@ -11,10 +11,31 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest("input, textarea, select, button, a"));
 }
 
+function isScrollable(element: Element): element is HTMLElement {
+  if (!(element instanceof HTMLElement)) return false;
+  const style = window.getComputedStyle(element);
+  return /(auto|scroll)/.test(style.overflowY) && element.scrollHeight > element.clientHeight + 1;
+}
+
+function isAtPullRefreshStart(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  const mainPanel = document.querySelector<HTMLElement>(".main-panel");
+  if (!mainPanel || !mainPanel.contains(target) || mainPanel.scrollTop > 0) return false;
+
+  let current: Element | null = target;
+  while (current && current !== mainPanel) {
+    if (isScrollable(current) && current.scrollTop > 0) return false;
+    current = current.parentElement;
+  }
+
+  return true;
+}
+
 function PullToRefresh({ onRefresh, disabled }: { onRefresh: () => Promise<void>; disabled: boolean }) {
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startYRef = useRef<number | null>(null);
+  const startTargetRef = useRef<EventTarget | null>(null);
   const pullDistanceRef = useRef(0);
   const trackingRef = useRef(false);
   const pullingRef = useRef(false);
@@ -22,6 +43,7 @@ function PullToRefresh({ onRefresh, disabled }: { onRefresh: () => Promise<void>
   useEffect(() => {
     function resetPull() {
       startYRef.current = null;
+      startTargetRef.current = null;
       trackingRef.current = false;
       pullingRef.current = false;
       pullDistanceRef.current = 0;
@@ -30,17 +52,16 @@ function PullToRefresh({ onRefresh, disabled }: { onRefresh: () => Promise<void>
 
     function onTouchStart(event: TouchEvent) {
       if (disabled || refreshing || event.touches.length !== 1 || isInteractiveTarget(event.target)) return;
-      const scrollPanel = document.querySelector<HTMLElement>(".main-panel");
-      if (!scrollPanel || scrollPanel.scrollTop > 0) return;
+      if (!isAtPullRefreshStart(event.target)) return;
       startYRef.current = event.touches[0].clientY;
+      startTargetRef.current = event.target;
       trackingRef.current = true;
       pullingRef.current = false;
     }
 
     function onTouchMove(event: TouchEvent) {
       if (!trackingRef.current || startYRef.current === null || event.touches.length !== 1) return;
-      const scrollPanel = document.querySelector<HTMLElement>(".main-panel");
-      if (!scrollPanel || scrollPanel.scrollTop > 0) {
+      if (!isAtPullRefreshStart(startTargetRef.current)) {
         resetPull();
         return;
       }
