@@ -464,30 +464,27 @@ export default function ManagementSheetPage() {
     }
     await run(async () => {
       const managementSheetPlantId = optionalLinkedPlantId(observationPlantId) || null;
-      const memo = await addObservationMemo({
+      let photo;
+      try {
+        if (recordPhotoFiles.observation) setRecordPhotoSaving("observation");
+        photo = recordPhotoFiles.observation ? await prepareAttachedPhoto(recordPhotoFiles.observation, {
+          photoDate: observationDate,
+          description: `관찰기록: ${observationContent.trim()}`
+        }) : undefined;
+      } finally {
+        setRecordPhotoSaving("");
+      }
+      await addObservationMemo({
         managementSheetId: activeSheet.id,
         managementSheetPlantId,
         observedDate: observationDate,
         content: observationContent.trim()
-      });
-      if (recordPhotoFiles.observation) {
-        setRecordPhotoSaving("observation");
-        try {
-          await savePhotoFile(recordPhotoFiles.observation, {
-            managementSheetPlantId,
-            photoDate: observationDate,
-            description: `관찰기록: ${observationContent.trim()}`,
-            recordType: "OBSERVATION",
-            recordId: memo.id
-          });
-        } finally {
-          setRecordPhotoSaving("");
-        }
-      }
+      }, photo);
       setObservationDate(todayIsoDate());
       setObservationPlantId("");
       setObservationContent("");
       clearRecordPhoto("observation");
+      setRecordPhotoSaving("");
     });
   }
 
@@ -503,7 +500,17 @@ export default function ManagementSheetPage() {
     }
     await run(async () => {
       const managementSheetPlantId = optionalLinkedPlantId(pestPlantId) || null;
-      const record = await addPestRecord({
+      let photo;
+      try {
+        if (recordPhotoFiles.pest) setRecordPhotoSaving("pest");
+        photo = recordPhotoFiles.pest ? await prepareAttachedPhoto(recordPhotoFiles.pest, {
+          photoDate: pestDate,
+          description: ["병해충기록", pestType.trim() || "미지정", pestSymptom.trim(), pestAction.trim()].filter(Boolean).join(": ")
+        }) : undefined;
+      } finally {
+        setRecordPhotoSaving("");
+      }
+      await addPestRecord({
         managementSheetId: activeSheet.id,
         managementSheetPlantId,
         detectedDate: pestDate,
@@ -511,21 +518,7 @@ export default function ManagementSheetPage() {
         severity: pestSeverity,
         symptom: pestSymptom,
         action: pestAction
-      });
-      if (recordPhotoFiles.pest) {
-        setRecordPhotoSaving("pest");
-        try {
-          await savePhotoFile(recordPhotoFiles.pest, {
-            managementSheetPlantId,
-            photoDate: pestDate,
-            description: ["병해충기록", pestType.trim() || "미지정", pestSymptom.trim(), pestAction.trim()].filter(Boolean).join(": "),
-            recordType: "PEST",
-            recordId: record.id
-          });
-        } finally {
-          setRecordPhotoSaving("");
-        }
-      }
+      }, photo);
       setPestDate(todayIsoDate());
       setPestPlantId("");
       setPestType("");
@@ -533,6 +526,7 @@ export default function ManagementSheetPage() {
       setPestSymptom("");
       setPestAction("");
       clearRecordPhoto("pest");
+      setRecordPhotoSaving("");
     });
   }
 
@@ -620,7 +614,17 @@ export default function ManagementSheetPage() {
       return;
     }
     await run(async () => {
-      const record = await addHarvestRecord({
+      let photo;
+      try {
+        if (recordPhotoFiles.harvest) setRecordPhotoSaving("harvest");
+        photo = recordPhotoFiles.harvest ? await prepareAttachedPhoto(recordPhotoFiles.harvest, {
+          photoDate: harvestDate,
+          description: ["수확기록", sheetPlantName(harvestPlantId), `${harvestQty}${harvestUnit}`, harvestQuality, harvestNotes.trim()].filter(Boolean).join(" · ")
+        }) : undefined;
+      } finally {
+        setRecordPhotoSaving("");
+      }
+      await addHarvestRecord({
         managementSheetId: activeSheet.id,
         managementSheetPlantId: harvestPlantId,
         harvestDate,
@@ -628,21 +632,7 @@ export default function ManagementSheetPage() {
         unit: harvestUnit,
         quality: harvestQuality,
         notes: harvestNotes
-      });
-      if (recordPhotoFiles.harvest) {
-        setRecordPhotoSaving("harvest");
-        try {
-          await savePhotoFile(recordPhotoFiles.harvest, {
-            managementSheetPlantId: harvestPlantId,
-            photoDate: harvestDate,
-            description: ["수확기록", sheetPlantName(harvestPlantId), `${harvestQty}${harvestUnit}`, harvestQuality, harvestNotes.trim()].filter(Boolean).join(" · "),
-            recordType: "HARVEST",
-            recordId: record.id
-          });
-        } finally {
-          setRecordPhotoSaving("");
-        }
-      }
+      }, photo);
       setHarvestDate(todayIsoDate());
       setHarvestPlantId("");
       setHarvestQty("1");
@@ -650,6 +640,7 @@ export default function ManagementSheetPage() {
       setHarvestQuality("보통");
       setHarvestNotes("");
       clearRecordPhoto("harvest");
+      setRecordPhotoSaving("");
     });
   }
 
@@ -657,7 +648,7 @@ export default function ManagementSheetPage() {
     await runConfirmed("이 수확기록을 삭제하시겠습니까?", () => deleteHarvestRecord(harvestRecordId));
   }
 
-  async function savePhotoFile(file: File | undefined, input: { managementSheetPlantId: string | null; photoDate: string; description: string; recordType?: RecordPhotoType; recordId?: string }) {
+  async function prepareAttachedPhoto(file: File | undefined, input: { photoDate: string; description: string }) {
     if (!file) {
       throw new Error("업로드할 사진을 선택해 주세요.");
     }
@@ -666,15 +657,22 @@ export default function ManagementSheetPage() {
     }
     setError("");
     const compressed = await compressPhoto(file);
-    await addPhoto({
-      managementSheetId: activeSheet.id,
-      managementSheetPlantId: input.managementSheetPlantId,
+    return {
       imageBlob: compressed.imageBlob,
       thumbnailBlob: compressed.thumbnailBlob,
       mimeType: compressed.mimeType,
       fileSize: compressed.fileSize,
       description: input.description,
-      photoDate: input.photoDate,
+      photoDate: input.photoDate
+    };
+  }
+
+  async function savePhotoFile(file: File | undefined, input: { managementSheetPlantId: string | null; photoDate: string; description: string; recordType?: RecordPhotoType; recordId?: string }) {
+    const prepared = await prepareAttachedPhoto(file, input);
+    await addPhoto({
+      managementSheetId: activeSheet.id,
+      managementSheetPlantId: input.managementSheetPlantId,
+      ...prepared,
       recordType: input.recordType ?? null,
       recordId: input.recordId ?? null
     });
