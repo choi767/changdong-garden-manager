@@ -22,6 +22,8 @@ const THUMBNAIL_MAX_SIDE = 360;
 const PHOTO_QUALITY = 0.72;
 const THUMBNAIL_QUALITY = 0.6;
 const PHOTO_ACCEPT = "image/*,.jpg,.jpeg,.png,.webp,.heic,.heif";
+type RecordPhotoKind = "observation" | "pest" | "harvest";
+type RecordPhotoType = NonNullable<Photo["recordType"]>;
 
 function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -141,6 +143,37 @@ function PhotoCard({ photo, plantName, onDelete, onPreview }: { photo: Photo; pl
   );
 }
 
+function RecordPhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (photo: Photo, url: string) => void }) {
+  const [imageUrl, setImageUrl] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+
+  useEffect(() => {
+    const nextImageUrl = URL.createObjectURL(photo.imageBlob);
+    const nextThumbnailUrl = URL.createObjectURL(photo.thumbnailBlob);
+    setImageUrl(nextImageUrl);
+    setThumbnailUrl(nextThumbnailUrl);
+    return () => {
+      URL.revokeObjectURL(nextImageUrl);
+      URL.revokeObjectURL(nextThumbnailUrl);
+    };
+  }, [photo.imageBlob, photo.thumbnailBlob]);
+
+  return (
+    <button className="record-photo-thumb-button" type="button" onClick={() => onPreview(photo, imageUrl)} aria-label="사진 크게 보기">
+      {thumbnailUrl && <img src={thumbnailUrl} alt={photo.description || `${photo.photoDate} 사진`} />}
+    </button>
+  );
+}
+
+function RecordPhotoList({ photos, onPreview }: { photos: Photo[]; onPreview: (photo: Photo, url: string) => void }) {
+  if (photos.length === 0) return null;
+  return (
+    <div className="record-photo-list">
+      {photos.map((photo) => <RecordPhotoThumb key={photo.id} photo={photo} onPreview={onPreview} />)}
+    </div>
+  );
+}
+
 export default function ManagementSheetPage() {
   const { sheetId } = useParams();
   const data = useGardenStore((state) => state.data);
@@ -210,8 +243,8 @@ export default function ManagementSheetPage() {
   const observationPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
   const pestPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
   const harvestPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [recordPhotoSaving, setRecordPhotoSaving] = useState("");
-  const [recordPhotoSaved, setRecordPhotoSaved] = useState("");
+  const [recordPhotoFiles, setRecordPhotoFiles] = useState<Record<RecordPhotoKind, File | null>>({ observation: null, pest: null, harvest: null });
+  const [recordPhotoSaving, setRecordPhotoSaving] = useState<RecordPhotoKind | "">("");
   const [recordPhotoInputKeys, setRecordPhotoInputKeys] = useState({ observation: 0, pest: 0, harvest: 0 });
   const [previewPhoto, setPreviewPhoto] = useState<{ photo: Photo; url: string } | null>(null);
   const [materialDate, setMaterialDate] = useState(todayIsoDate());
@@ -237,12 +270,6 @@ export default function ManagementSheetPage() {
     const timer = window.setTimeout(() => setPhotoSaved(false), 2500);
     return () => window.clearTimeout(timer);
   }, [photoSaved]);
-
-  useEffect(() => {
-    if (!recordPhotoSaved) return;
-    const timer = window.setTimeout(() => setRecordPhotoSaved(""), 2500);
-    return () => window.clearTimeout(timer);
-  }, [recordPhotoSaved]);
 
   if (!data) return null;
   const sheet = data.managementSheets.find((item) => item.id === sheetId);
@@ -278,6 +305,7 @@ export default function ManagementSheetPage() {
   const visibleWorkLogs = showAllWorkLogs ? workLogs : workLogs.slice(0, 5);
   const observationMemos = (data.observationMemos ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
   const pestRecords = (data.pestRecords ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+  const photosForRecord = (recordType: RecordPhotoType, recordId: string) => photos.filter((photo) => photo.recordType === recordType && photo.recordId === recordId);
   const materialUsages = (data.materialUsages ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
   const evaluation = (data.sheetEvaluations ?? []).find((item) => item.managementSheetId === sheet.id);
   const membershipEvents = data.memberships.filter((item) => item.managementGroupId === group.id);
@@ -435,15 +463,31 @@ export default function ManagementSheetPage() {
       return;
     }
     await run(async () => {
-      await addObservationMemo({
+      const managementSheetPlantId = optionalLinkedPlantId(observationPlantId) || null;
+      const memo = await addObservationMemo({
         managementSheetId: activeSheet.id,
-        managementSheetPlantId: optionalLinkedPlantId(observationPlantId) || null,
+        managementSheetPlantId,
         observedDate: observationDate,
         content: observationContent.trim()
       });
+      if (recordPhotoFiles.observation) {
+        setRecordPhotoSaving("observation");
+        try {
+          await savePhotoFile(recordPhotoFiles.observation, {
+            managementSheetPlantId,
+            photoDate: observationDate,
+            description: `관찰기록: ${observationContent.trim()}`,
+            recordType: "OBSERVATION",
+            recordId: memo.id
+          });
+        } finally {
+          setRecordPhotoSaving("");
+        }
+      }
       setObservationDate(todayIsoDate());
       setObservationPlantId("");
       setObservationContent("");
+      clearRecordPhoto("observation");
     });
   }
 
@@ -458,21 +502,37 @@ export default function ManagementSheetPage() {
       return;
     }
     await run(async () => {
-      await addPestRecord({
+      const managementSheetPlantId = optionalLinkedPlantId(pestPlantId) || null;
+      const record = await addPestRecord({
         managementSheetId: activeSheet.id,
-        managementSheetPlantId: optionalLinkedPlantId(pestPlantId) || null,
+        managementSheetPlantId,
         detectedDate: pestDate,
         pestType: pestType.trim() || "미지정",
         severity: pestSeverity,
         symptom: pestSymptom,
         action: pestAction
       });
+      if (recordPhotoFiles.pest) {
+        setRecordPhotoSaving("pest");
+        try {
+          await savePhotoFile(recordPhotoFiles.pest, {
+            managementSheetPlantId,
+            photoDate: pestDate,
+            description: ["병해충기록", pestType.trim() || "미지정", pestSymptom.trim(), pestAction.trim()].filter(Boolean).join(": "),
+            recordType: "PEST",
+            recordId: record.id
+          });
+        } finally {
+          setRecordPhotoSaving("");
+        }
+      }
       setPestDate(todayIsoDate());
       setPestPlantId("");
       setPestType("");
       setPestSeverity("보통");
       setPestSymptom("");
       setPestAction("");
+      clearRecordPhoto("pest");
     });
   }
 
@@ -560,7 +620,7 @@ export default function ManagementSheetPage() {
       return;
     }
     await run(async () => {
-      await addHarvestRecord({
+      const record = await addHarvestRecord({
         managementSheetId: activeSheet.id,
         managementSheetPlantId: harvestPlantId,
         harvestDate,
@@ -569,12 +629,27 @@ export default function ManagementSheetPage() {
         quality: harvestQuality,
         notes: harvestNotes
       });
+      if (recordPhotoFiles.harvest) {
+        setRecordPhotoSaving("harvest");
+        try {
+          await savePhotoFile(recordPhotoFiles.harvest, {
+            managementSheetPlantId: harvestPlantId,
+            photoDate: harvestDate,
+            description: ["수확기록", sheetPlantName(harvestPlantId), `${harvestQty}${harvestUnit}`, harvestQuality, harvestNotes.trim()].filter(Boolean).join(" · "),
+            recordType: "HARVEST",
+            recordId: record.id
+          });
+        } finally {
+          setRecordPhotoSaving("");
+        }
+      }
       setHarvestDate(todayIsoDate());
       setHarvestPlantId("");
       setHarvestQty("1");
       setHarvestUnit("개");
       setHarvestQuality("보통");
       setHarvestNotes("");
+      clearRecordPhoto("harvest");
     });
   }
 
@@ -582,7 +657,7 @@ export default function ManagementSheetPage() {
     await runConfirmed("이 수확기록을 삭제하시겠습니까?", () => deleteHarvestRecord(harvestRecordId));
   }
 
-  async function savePhotoFile(file: File | undefined, input: { managementSheetPlantId: string | null; photoDate: string; description: string }) {
+  async function savePhotoFile(file: File | undefined, input: { managementSheetPlantId: string | null; photoDate: string; description: string; recordType?: RecordPhotoType; recordId?: string }) {
     if (!file) {
       throw new Error("업로드할 사진을 선택해 주세요.");
     }
@@ -599,7 +674,9 @@ export default function ManagementSheetPage() {
       mimeType: compressed.mimeType,
       fileSize: compressed.fileSize,
       description: input.description,
-      photoDate: input.photoDate
+      photoDate: input.photoDate,
+      recordType: input.recordType ?? null,
+      recordId: input.recordId ?? null
     });
   }
 
@@ -624,32 +701,30 @@ export default function ManagementSheetPage() {
     }
   }
 
-  function recordPhotoLabel(kind: "observation" | "pest" | "harvest"): string {
+  function recordPhotoLabel(kind: RecordPhotoKind): string {
     if (recordPhotoSaving === kind) return "압축 저장 중...";
-    if (recordPhotoSaved === kind) return "저장했습니다";
-    return "사진 올리기";
+    if (recordPhotoFiles[kind]) return "사진 선택됨";
+    return "사진 선택";
   }
 
-  function recordPhotoButtonClass(kind: "observation" | "pest" | "harvest"): string {
-    return `secondary-button photo-file-button ${recordPhotoSaved === kind ? "upload-done" : ""}`;
+  function recordPhotoButtonClass(kind: RecordPhotoKind): string {
+    return `secondary-button photo-file-button ${recordPhotoFiles[kind] ? "upload-done" : ""}`;
   }
 
-  async function onRecordPhotoFileChange(
-    kind: "observation" | "pest" | "harvest",
-    file: File | undefined,
-    input: { managementSheetPlantId: string | null; photoDate: string; description: string }
-  ) {
-    setRecordPhotoSaving(kind);
-    setRecordPhotoSaved("");
-    try {
-      await savePhotoFile(file, input);
-      setRecordPhotoSaved(kind);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "사진 저장에 실패했습니다.");
-    } finally {
-      setRecordPhotoInputKeys((keys) => ({ ...keys, [kind]: keys[kind] + 1 }));
-      setRecordPhotoSaving("");
+  function onRecordPhotoFileChange(kind: RecordPhotoKind, file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("사진 파일만 업로드할 수 있습니다.");
+      clearRecordPhoto(kind);
+      return;
     }
+    setError("");
+    setRecordPhotoFiles((files) => ({ ...files, [kind]: file }));
+  }
+
+  function clearRecordPhoto(kind: RecordPhotoKind) {
+    setRecordPhotoFiles((files) => ({ ...files, [kind]: null }));
+    setRecordPhotoInputKeys((keys) => ({ ...keys, [kind]: keys[kind] + 1 }));
   }
 
   async function onDeletePhoto(photoId: string) {
@@ -1001,7 +1076,6 @@ export default function ManagementSheetPage() {
             </label>
           </div>
           <div className="record-action-row">
-            <button className="primary-button" type="submit" disabled={sheet.status !== "ACTIVE"}>관찰기록 저장</button>
             <button
               className={recordPhotoButtonClass("observation")}
               type="button"
@@ -1016,18 +1090,18 @@ export default function ManagementSheetPage() {
               className="visually-hidden-file"
               type="file"
               accept={PHOTO_ACCEPT}
-              onChange={(event) => void onRecordPhotoFileChange("observation", event.target.files?.[0], {
-                managementSheetPlantId: optionalLinkedPlantId(observationPlantId) || null,
-                photoDate: observationDate,
-                description: `관찰기록${observationContent.trim() ? `: ${observationContent.trim()}` : ""}`
-              })}
+              onChange={(event) => onRecordPhotoFileChange("observation", event.target.files?.[0])}
               disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE"}
             />
+            <button className="primary-button" type="submit" disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE"}>관찰기록 저장</button>
           </div>
           <div className="timeline">
             {observationMemos.map((item) => (
               <div className="timeline-item" key={item.id}>
-                <p>{item.observedDate} · {sheetPlantName(item.managementSheetPlantId)}: {item.content}</p>
+                <div>
+                  <p>{item.observedDate} · {sheetPlantName(item.managementSheetPlantId)}: {item.content}</p>
+                  <RecordPhotoList photos={photosForRecord("OBSERVATION", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
+                </div>
                 <button className="danger-button compact-action" type="button" onClick={() => void onDeleteObservation(item.id)}>삭제</button>
               </div>
             ))}
@@ -1071,7 +1145,6 @@ export default function ManagementSheetPage() {
             </label>
           </div>
           <div className="record-action-row">
-            <button className="primary-button" type="submit" disabled={sheet.status !== "ACTIVE"}>병해충기록 저장</button>
             <button
               className={recordPhotoButtonClass("pest")}
               type="button"
@@ -1086,23 +1159,18 @@ export default function ManagementSheetPage() {
               className="visually-hidden-file"
               type="file"
               accept={PHOTO_ACCEPT}
-              onChange={(event) => void onRecordPhotoFileChange("pest", event.target.files?.[0], {
-                managementSheetPlantId: optionalLinkedPlantId(pestPlantId) || null,
-                photoDate: pestDate,
-                description: [
-                  "병해충기록",
-                  pestType.trim() || "",
-                  pestSymptom.trim() || "",
-                  pestAction.trim() || ""
-                ].filter(Boolean).join(": ")
-              })}
+              onChange={(event) => onRecordPhotoFileChange("pest", event.target.files?.[0])}
               disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE"}
             />
+            <button className="primary-button" type="submit" disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE"}>병해충기록 저장</button>
           </div>
           <div className="timeline">
             {pestRecords.map((item) => (
               <div className="timeline-item" key={item.id}>
-                <p>{item.detectedDate} · {sheetPlantName(item.managementSheetPlantId)} · {item.pestType}({item.severity}): {item.symptom}{item.action ? ` / ${item.action}` : ""}</p>
+                <div>
+                  <p>{item.detectedDate} · {sheetPlantName(item.managementSheetPlantId)} · {item.pestType}({item.severity}): {item.symptom}{item.action ? ` / ${item.action}` : ""}</p>
+                  <RecordPhotoList photos={photosForRecord("PEST", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
+                </div>
                 <button className="danger-button compact-action" type="button" onClick={() => void onDeletePestRecord(item.id)}>삭제</button>
               </div>
             ))}
@@ -1253,7 +1321,6 @@ export default function ManagementSheetPage() {
             </label>
           </div>
           <div className="record-action-row">
-            <button className="primary-button" type="submit" disabled={!harvestPlantId || sheet.status !== "ACTIVE"}>수확 저장</button>
             <button
               className={recordPhotoButtonClass("harvest")}
               type="button"
@@ -1268,29 +1335,23 @@ export default function ManagementSheetPage() {
               className="visually-hidden-file"
               type="file"
               accept={PHOTO_ACCEPT}
-              onChange={(event) => void onRecordPhotoFileChange("harvest", event.target.files?.[0], {
-                managementSheetPlantId: harvestPlantId || null,
-                photoDate: harvestDate,
-                description: [
-                  "수확기록",
-                  harvestPlantId ? sheetPlantName(harvestPlantId) : "",
-                  `${harvestQty}${harvestUnit}`,
-                  harvestQuality,
-                  harvestNotes.trim()
-                ].filter(Boolean).join(" · ")
-              })}
+              onChange={(event) => onRecordPhotoFileChange("harvest", event.target.files?.[0])}
               disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE"}
             />
+            <button className="primary-button" type="submit" disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE"}>수확 저장</button>
           </div>
           <div className="timeline">
             {visibleHarvestRecords.map((record) => {
               const sheetPlant = sheetPlants.find((item) => item.id === record.managementSheetPlantId);
               return (
                 <div className="timeline-item" key={record.id}>
-                  <p>
-                    {record.harvestDate} · {sheetPlant?.plant?.name ?? "삭제된 식물"} · {record.quantity}{record.unit} · {record.quality}
-                    {record.notes ? `: ${record.notes}` : ""}
-                  </p>
+                  <div>
+                    <p>
+                      {record.harvestDate} · {sheetPlant?.plant?.name ?? "삭제된 식물"} · {record.quantity}{record.unit} · {record.quality}
+                      {record.notes ? `: ${record.notes}` : ""}
+                    </p>
+                    <RecordPhotoList photos={photosForRecord("HARVEST", record.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
+                  </div>
                   <button className="danger-button compact-action" type="button" onClick={() => void onDeleteHarvestRecord(record.id)}>삭제</button>
                 </div>
               );

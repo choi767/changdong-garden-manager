@@ -139,6 +139,8 @@ export interface Photo {
   id: string;
   managementSheetId: string;
   managementSheetPlantId: string | null;
+  recordType: "OBSERVATION" | "PEST" | "HARVEST" | null;
+  recordId: string | null;
   imageBlob: Blob;
   thumbnailBlob: Blob;
   mimeType: string;

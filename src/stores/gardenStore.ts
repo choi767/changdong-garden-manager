@@ -56,6 +56,7 @@ type SheetPlantFormInput = Pick<
 type ScheduleReminderInput = Pick<ScheduleReminder, "managementSheetId" | "managementSheetPlantId" | "dueDate" | "category" | "content">;
 type ObservationMemoInput = Pick<ObservationMemo, "managementSheetId" | "managementSheetPlantId" | "observedDate" | "content">;
 type PestRecordInput = Pick<PestRecord, "managementSheetId" | "managementSheetPlantId" | "detectedDate" | "pestType" | "severity" | "symptom" | "action">;
+type PhotoInput = Pick<Photo, "managementSheetId" | "managementSheetPlantId" | "imageBlob" | "thumbnailBlob" | "mimeType" | "fileSize" | "description" | "photoDate"> & Partial<Pick<Photo, "recordType" | "recordId">>;
 type MaterialUsageInput = Pick<MaterialUsage, "managementSheetId" | "usedDate" | "itemName" | "quantity" | "unit" | "cost" | "memo">;
 type SheetEvaluationInput = Pick<SheetEvaluation, "managementSheetId" | "rating" | "summary" | "improvement" | "evaluatedAt">;
 
@@ -85,18 +86,18 @@ interface GardenState {
   addWorkLog: (input: Pick<WorkLog, "managementSheetId" | "managementSheetPlantId" | "workDate" | "workType" | "content" | "author">) => Promise<void>;
   deleteWorkLog: (workLogId: string) => Promise<void>;
   addZoneWorkLog: (zoneId: string, workDate: string, workType: string, content: string) => Promise<void>;
-  addHarvestRecord: (input: Pick<HarvestRecord, "managementSheetId" | "managementSheetPlantId" | "harvestDate" | "quantity" | "unit" | "quality" | "notes">) => Promise<void>;
+  addHarvestRecord: (input: Pick<HarvestRecord, "managementSheetId" | "managementSheetPlantId" | "harvestDate" | "quantity" | "unit" | "quality" | "notes">) => Promise<HarvestRecord>;
   deleteHarvestRecord: (harvestRecordId: string) => Promise<void>;
-  addPhoto: (input: Pick<Photo, "managementSheetId" | "managementSheetPlantId" | "imageBlob" | "thumbnailBlob" | "mimeType" | "fileSize" | "description" | "photoDate">) => Promise<void>;
+  addPhoto: (input: PhotoInput) => Promise<Photo>;
   deletePhoto: (photoId: string) => Promise<void>;
   addScheduleReminder: (input: ScheduleReminderInput) => Promise<void>;
   addZoneScheduleReminder: (zoneId: string, dueDate: string, category: string, content: string) => Promise<void>;
   completeScheduleReminder: (reminderId: string, scope?: "single" | "batch") => Promise<void>;
   toggleScheduleReminder: (reminderId: string) => Promise<void>;
   deleteScheduleReminder: (reminderId: string, scope?: "single" | "batch") => Promise<void>;
-  addObservationMemo: (input: ObservationMemoInput) => Promise<void>;
+  addObservationMemo: (input: ObservationMemoInput) => Promise<ObservationMemo>;
   deleteObservationMemo: (memoId: string) => Promise<void>;
-  addPestRecord: (input: PestRecordInput) => Promise<void>;
+  addPestRecord: (input: PestRecordInput) => Promise<PestRecord>;
   deletePestRecord: (pestRecordId: string) => Promise<void>;
   addMaterialUsage: (input: MaterialUsageInput) => Promise<void>;
   deleteMaterialUsage: (materialUsageId: string) => Promise<void>;
@@ -151,6 +152,7 @@ function withDefaults(data: AppData): AppData {
     ...data,
     beds,
     plants,
+    photos: (data.photos ?? []).map((photo) => ({ ...photo, recordType: photo.recordType ?? null, recordId: photo.recordId ?? null })),
     scheduleReminders: (data.scheduleReminders ?? []).map((item) => ({ ...item, batchId: item.batchId ?? null })),
     observationMemos: data.observationMemos ?? [],
     pestRecords: data.pestRecords ?? [],
@@ -556,8 +558,10 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const data = requireData(get().data);
     if (!input.managementSheetPlantId) throw new Error("수확기록은 반드시 관리표의 식물과 연결되어야 합니다.");
     const timestamp = nowIso();
-    data.harvestRecords.push({ ...input, id: makeId("harvest"), createdAt: timestamp, updatedAt: timestamp });
+    const record = { ...input, id: makeId("harvest"), createdAt: timestamp, updatedAt: timestamp };
+    data.harvestRecords.push(record);
     await persist(set, data, "수확기록을 저장했습니다.");
+    return record;
   },
 
   async deleteHarvestRecord(harvestRecordId) {
@@ -565,6 +569,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const exists = data.harvestRecords.some((item) => item.id === harvestRecordId);
     if (!exists) throw new Error("존재하지 않는 수확기록입니다.");
     data.harvestRecords = data.harvestRecords.filter((item) => item.id !== harvestRecordId);
+    data.photos = data.photos.filter((item) => item.recordType !== "HARVEST" || item.recordId !== harvestRecordId);
     await persist(set, data, "삭제했습니다");
   },
 
@@ -575,8 +580,10 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     if (input.managementSheetPlantId && !data.sheetPlants.some((item) => item.id === input.managementSheetPlantId && item.managementSheetId === input.managementSheetId)) {
       throw new Error("관리표에 연결된 식물을 찾을 수 없습니다.");
     }
-    data.photos.push({ ...input, id: makeId("photo"), createdAt: nowIso() });
+    const photo = { ...input, recordType: input.recordType ?? null, recordId: input.recordId ?? null, id: makeId("photo"), createdAt: nowIso() };
+    data.photos.push(photo);
     await persist(set, data, "사진을 저장했습니다.");
+    return photo;
   },
 
   async deletePhoto(photoId) {
@@ -680,8 +687,10 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   async addObservationMemo(input) {
     const data = requireData(get().data);
     const timestamp = nowIso();
-    data.observationMemos.push({ ...input, id: makeId("observation"), createdAt: timestamp, updatedAt: timestamp });
+    const memo = { ...input, id: makeId("observation"), createdAt: timestamp, updatedAt: timestamp };
+    data.observationMemos.push(memo);
     await persist(set, data, "관찰기록을 저장했습니다.");
+    return memo;
   },
 
   async deleteObservationMemo(memoId) {
@@ -689,14 +698,17 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const exists = data.observationMemos.some((item) => item.id === memoId);
     if (!exists) throw new Error("존재하지 않는 관찰기록입니다.");
     data.observationMemos = data.observationMemos.filter((item) => item.id !== memoId);
+    data.photos = data.photos.filter((item) => item.recordType !== "OBSERVATION" || item.recordId !== memoId);
     await persist(set, data, "삭제했습니다");
   },
 
   async addPestRecord(input) {
     const data = requireData(get().data);
     const timestamp = nowIso();
-    data.pestRecords.push({ ...input, id: makeId("pest"), createdAt: timestamp, updatedAt: timestamp });
+    const record = { ...input, id: makeId("pest"), createdAt: timestamp, updatedAt: timestamp };
+    data.pestRecords.push(record);
     await persist(set, data, "병해충기록을 저장했습니다.");
+    return record;
   },
 
   async deletePestRecord(pestRecordId) {
@@ -704,6 +716,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const exists = data.pestRecords.some((item) => item.id === pestRecordId);
     if (!exists) throw new Error("존재하지 않는 병해충기록입니다.");
     data.pestRecords = data.pestRecords.filter((item) => item.id !== pestRecordId);
+    data.photos = data.photos.filter((item) => item.recordType !== "PEST" || item.recordId !== pestRecordId);
     await persist(set, data, "삭제했습니다");
   },
 
