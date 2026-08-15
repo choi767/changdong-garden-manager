@@ -206,6 +206,31 @@ async function persist(set: (partial: Partial<GardenState>) => void, data: AppDa
   set({ data, notice: { type: "success", message } });
 }
 
+function isCloudConflict(error: unknown): boolean {
+  return error instanceof Error && error.name === "CloudConflictError";
+}
+
+async function persistMutation<T>(
+  set: (partial: Partial<GardenState>) => void,
+  getData: () => AppData | null,
+  message: string,
+  mutate: (data: AppData) => T
+): Promise<T> {
+  const data = requireData(getData());
+  const result = mutate(data);
+  try {
+    await persist(set, data, message);
+    return result;
+  } catch (error) {
+    if (!isCloudConflict(error)) throw error;
+  }
+
+  const freshData = cloneData(withDefaults(await repository.load()));
+  const retryResult = mutate(freshData);
+  await persist(set, freshData, message);
+  return retryResult;
+}
+
 function requireData(data: AppData | null): AppData {
   if (!data) throw new Error("데이터를 불러오는 중입니다.");
   return cloneData(data);
@@ -574,16 +599,16 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addHarvestRecord(input, photo) {
-    const data = requireData(get().data);
     if (!input.managementSheetPlantId) throw new Error("수확기록은 반드시 관리표의 식물과 연결되어야 합니다.");
-    const timestamp = nowIso();
-    const record = { ...input, id: makeId("harvest"), createdAt: timestamp, updatedAt: timestamp };
-    data.harvestRecords.push(record);
-    if (photo) {
-      data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "HARVEST", record.id));
-    }
-    await persist(set, data, "수확기록을 저장했습니다.");
-    return record;
+    return persistMutation(set, () => get().data, "수확기록을 저장했습니다.", (data) => {
+      const timestamp = nowIso();
+      const record = { ...input, id: makeId("harvest"), createdAt: timestamp, updatedAt: timestamp };
+      data.harvestRecords.push(record);
+      if (photo) {
+        data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "HARVEST", record.id));
+      }
+      return record;
+    });
   },
 
   async deleteHarvestRecord(harvestRecordId) {
@@ -596,16 +621,16 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addPhoto(input) {
-    const data = requireData(get().data);
-    const sheet = data.managementSheets.find((item) => item.id === input.managementSheetId);
-    if (!sheet) throw new Error("존재하지 않는 관리표입니다.");
-    if (input.managementSheetPlantId && !data.sheetPlants.some((item) => item.id === input.managementSheetPlantId && item.managementSheetId === input.managementSheetId)) {
-      throw new Error("관리표에 연결된 식물을 찾을 수 없습니다.");
-    }
-    const photo = { ...input, recordType: input.recordType ?? null, recordId: input.recordId ?? null, id: makeId("photo"), createdAt: nowIso() };
-    data.photos.push(photo);
-    await persist(set, data, "사진을 저장했습니다.");
-    return photo;
+    return persistMutation(set, () => get().data, "사진을 저장했습니다.", (data) => {
+      const sheet = data.managementSheets.find((item) => item.id === input.managementSheetId);
+      if (!sheet) throw new Error("존재하지 않는 관리표입니다.");
+      if (input.managementSheetPlantId && !data.sheetPlants.some((item) => item.id === input.managementSheetPlantId && item.managementSheetId === input.managementSheetId)) {
+        throw new Error("관리표에 연결된 식물을 찾을 수 없습니다.");
+      }
+      const photo = { ...input, recordType: input.recordType ?? null, recordId: input.recordId ?? null, id: makeId("photo"), createdAt: nowIso() };
+      data.photos.push(photo);
+      return photo;
+    });
   },
 
   async deletePhoto(photoId) {
@@ -707,15 +732,15 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addObservationMemo(input, photo) {
-    const data = requireData(get().data);
-    const timestamp = nowIso();
-    const memo = { ...input, id: makeId("observation"), createdAt: timestamp, updatedAt: timestamp };
-    data.observationMemos.push(memo);
-    if (photo) {
-      data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "OBSERVATION", memo.id));
-    }
-    await persist(set, data, "관찰기록을 저장했습니다.");
-    return memo;
+    return persistMutation(set, () => get().data, "관찰기록을 저장했습니다.", (data) => {
+      const timestamp = nowIso();
+      const memo = { ...input, id: makeId("observation"), createdAt: timestamp, updatedAt: timestamp };
+      data.observationMemos.push(memo);
+      if (photo) {
+        data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "OBSERVATION", memo.id));
+      }
+      return memo;
+    });
   },
 
   async deleteObservationMemo(memoId) {
@@ -728,15 +753,15 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addPestRecord(input, photo) {
-    const data = requireData(get().data);
-    const timestamp = nowIso();
-    const record = { ...input, id: makeId("pest"), createdAt: timestamp, updatedAt: timestamp };
-    data.pestRecords.push(record);
-    if (photo) {
-      data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "PEST", record.id));
-    }
-    await persist(set, data, "병해충기록을 저장했습니다.");
-    return record;
+    return persistMutation(set, () => get().data, "병해충기록을 저장했습니다.", (data) => {
+      const timestamp = nowIso();
+      const record = { ...input, id: makeId("pest"), createdAt: timestamp, updatedAt: timestamp };
+      data.pestRecords.push(record);
+      if (photo) {
+        data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "PEST", record.id));
+      }
+      return record;
+    });
   },
 
   async deletePestRecord(pestRecordId) {
