@@ -1,0 +1,19 @@
+{
+  "name": "창동 틀밭관리 프로그램",
+  "short_name": "틀밭관리",
+  "description": "창동 틀밭 농장 경작, 식물, 작업 기록 관리",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7f2",
+  "theme_color": "#173c2a",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
