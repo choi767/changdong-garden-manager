@@ -4,21 +4,32 @@ import { Trash2 } from "lucide-react";
 import type { Photo } from "../../domain/entities/models";
 import { useGardenStore } from "../../stores/gardenStore";
 
-function PhotoThumb({ photo }: { photo: Photo }) {
-  const [url, setUrl] = useState("");
+function PhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (photo: Photo, url: string) => void }) {
+  const [imageUrl, setImageUrl] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
 
   useEffect(() => {
-    const nextUrl = URL.createObjectURL(photo.thumbnailBlob);
-    setUrl(nextUrl);
-    return () => URL.revokeObjectURL(nextUrl);
-  }, [photo.thumbnailBlob]);
+    const nextImageUrl = URL.createObjectURL(photo.imageBlob);
+    const nextThumbnailUrl = URL.createObjectURL(photo.thumbnailBlob);
+    setImageUrl(nextImageUrl);
+    setThumbnailUrl(nextThumbnailUrl);
+    return () => {
+      URL.revokeObjectURL(nextImageUrl);
+      URL.revokeObjectURL(nextThumbnailUrl);
+    };
+  }, [photo.imageBlob, photo.thumbnailBlob]);
 
-  return <img className="overview-photo-thumb" src={url} alt={photo.description || `${photo.photoDate} 사진`} />;
+  return (
+    <button className="overview-photo-thumb-button" type="button" onClick={() => onPreview(photo, imageUrl)} aria-label="사진 크게 보기">
+      {thumbnailUrl && <img className="overview-photo-thumb" src={thumbnailUrl} alt={photo.description || `${photo.photoDate} 사진`} />}
+    </button>
+  );
 }
 
 export default function PhotoOverviewPage() {
   const data = useGardenStore((state) => state.data);
   const deletePhoto = useGardenStore((state) => state.deletePhoto);
+  const [previewPhoto, setPreviewPhoto] = useState<{ photo: Photo; url: string } | null>(null);
 
   if (!data) return null;
   const appData = data;
@@ -42,6 +53,16 @@ export default function PhotoOverviewPage() {
   async function onDelete(photoId: string) {
     if (!window.confirm("이 사진을 삭제하시겠습니까?")) return;
     await deletePhoto(photoId);
+  }
+
+  function onDownloadPreviewPhoto() {
+    if (!previewPhoto) return;
+    const link = document.createElement("a");
+    link.href = previewPhoto.url;
+    link.download = `${previewPhoto.photo.photoDate}_사진.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 
   return (
@@ -69,7 +90,7 @@ export default function PhotoOverviewPage() {
                 const info = sheetInfo(item.managementSheetId);
                 return (
                   <div className="timeline-item overview-photo-item" key={item.id}>
-                    <PhotoThumb photo={item} />
+                    <PhotoThumb photo={item} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
                     <p>
                       {item.photoDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)}
                       {item.description ? ` · ${item.description}` : ""}
@@ -85,6 +106,18 @@ export default function PhotoOverviewPage() {
           </section>
         );
       })}
+
+      {previewPhoto && (
+        <div className="modal-backdrop photo-preview-backdrop" role="presentation" onClick={() => setPreviewPhoto(null)}>
+          <div className="photo-preview-panel" role="dialog" aria-modal="true" aria-label="사진 크게 보기" onClick={(event) => event.stopPropagation()}>
+            <div className="photo-preview-actions">
+              <button className="secondary-button compact-action" type="button" onClick={onDownloadPreviewPhoto}>다운로드</button>
+              <button className="secondary-button compact-action" type="button" onClick={() => setPreviewPhoto(null)}>닫기</button>
+            </div>
+            <img src={previewPhoto.url} alt={previewPhoto.photo.description || "사진 크게 보기"} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

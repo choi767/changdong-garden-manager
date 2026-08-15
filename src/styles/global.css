@@ -1382,13 +1382,23 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   grid-template-columns: 58px minmax(0, 1fr) auto;
   align-items: center;
 }
+.overview-photo-thumb-button {
+  width: 58px;
+  height: 44px;
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: #eef3ee;
+  cursor: pointer;
+}
 .overview-photo-thumb {
   width: 58px;
   height: 44px;
   object-fit: cover;
-  border-radius: 6px;
+  display: block;
   border: 1px solid #d8ded7;
-  background: #eef3ee;
 }
 
 @media (max-width: 920px) {
@@ -1544,6 +1554,7 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
     min-width: 0;
   }
   .overview-photo-thumb { width: 50px; height: 40px; }
+  .overview-photo-thumb-button { width: 50px; height: 40px; }
   .photo-thumb-button { width: 84px; }
   .bed-overlay strong { font-size: 10px; }
   .bed-overlay span { display: none; }
