@@ -465,22 +465,28 @@ export default function ManagementSheetPage() {
     }
     await run(async () => {
       const managementSheetPlantId = optionalLinkedPlantId(observationPlantId) || null;
-      let photo;
-      try {
-        if (recordPhotoFiles.observation) setRecordPhotoSaving("observation");
-        photo = recordPhotoFiles.observation ? await prepareAttachedPhoto(recordPhotoFiles.observation, {
-          photoDate: observationDate,
-          description: `관찰기록: ${resolvedContent}`
-        }) : undefined;
-      } finally {
-        setRecordPhotoSaving("");
-      }
-      await addObservationMemo({
+      const memo = await addObservationMemo({
         managementSheetId: activeSheet.id,
         managementSheetPlantId,
         observedDate: observationDate,
         content: resolvedContent
-      }, photo);
+      });
+      if (recordPhotoFiles.observation) {
+        setRecordPhotoSaving("observation");
+        try {
+          await savePhotoFile(recordPhotoFiles.observation, {
+            managementSheetPlantId,
+            photoDate: observationDate,
+            description: `관찰기록: ${resolvedContent}`,
+            recordType: "OBSERVATION",
+            recordId: memo.id
+          });
+        } catch (err) {
+          setError(err instanceof Error ? `관찰기록은 저장됐지만 사진 저장에 실패했습니다: ${err.message}` : "관찰기록은 저장됐지만 사진 저장에 실패했습니다.");
+        } finally {
+          setRecordPhotoSaving("");
+        }
+      }
       setObservationDate(todayIsoDate());
       setObservationPlantId("");
       setObservationContent("");
@@ -503,17 +509,7 @@ export default function ManagementSheetPage() {
     }
     await run(async () => {
       const managementSheetPlantId = optionalLinkedPlantId(pestPlantId) || null;
-      let photo;
-      try {
-        if (recordPhotoFiles.pest) setRecordPhotoSaving("pest");
-        photo = recordPhotoFiles.pest ? await prepareAttachedPhoto(recordPhotoFiles.pest, {
-          photoDate: pestDate,
-          description: ["병해충기록", resolvedPestType || "미지정", resolvedPestSymptom, pestAction.trim()].filter(Boolean).join(": ")
-        }) : undefined;
-      } finally {
-        setRecordPhotoSaving("");
-      }
-      await addPestRecord({
+      const record = await addPestRecord({
         managementSheetId: activeSheet.id,
         managementSheetPlantId,
         detectedDate: pestDate,
@@ -521,7 +517,23 @@ export default function ManagementSheetPage() {
         severity: pestSeverity,
         symptom: resolvedPestSymptom,
         action: pestAction
-      }, photo);
+      });
+      if (recordPhotoFiles.pest) {
+        setRecordPhotoSaving("pest");
+        try {
+          await savePhotoFile(recordPhotoFiles.pest, {
+            managementSheetPlantId,
+            photoDate: pestDate,
+            description: ["병해충기록", resolvedPestType || "미지정", resolvedPestSymptom, pestAction.trim()].filter(Boolean).join(": "),
+            recordType: "PEST",
+            recordId: record.id
+          });
+        } catch (err) {
+          setError(err instanceof Error ? `병해충기록은 저장됐지만 사진 저장에 실패했습니다: ${err.message}` : "병해충기록은 저장됐지만 사진 저장에 실패했습니다.");
+        } finally {
+          setRecordPhotoSaving("");
+        }
+      }
       setPestDate(todayIsoDate());
       setPestPlantId("");
       setPestType("");
@@ -617,17 +629,7 @@ export default function ManagementSheetPage() {
       return;
     }
     await run(async () => {
-      let photo;
-      try {
-        if (recordPhotoFiles.harvest) setRecordPhotoSaving("harvest");
-        photo = recordPhotoFiles.harvest ? await prepareAttachedPhoto(recordPhotoFiles.harvest, {
-          photoDate: harvestDate,
-          description: ["수확기록", sheetPlantName(harvestPlantId), `${harvestQty}${harvestUnit}`, harvestQuality, harvestNotes.trim()].filter(Boolean).join(" · ")
-        }) : undefined;
-      } finally {
-        setRecordPhotoSaving("");
-      }
-      await addHarvestRecord({
+      const record = await addHarvestRecord({
         managementSheetId: activeSheet.id,
         managementSheetPlantId: harvestPlantId,
         harvestDate,
@@ -635,7 +637,23 @@ export default function ManagementSheetPage() {
         unit: harvestUnit,
         quality: harvestQuality,
         notes: harvestNotes
-      }, photo);
+      });
+      if (recordPhotoFiles.harvest) {
+        setRecordPhotoSaving("harvest");
+        try {
+          await savePhotoFile(recordPhotoFiles.harvest, {
+            managementSheetPlantId: harvestPlantId,
+            photoDate: harvestDate,
+            description: ["수확기록", sheetPlantName(harvestPlantId), `${harvestQty}${harvestUnit}`, harvestQuality, harvestNotes.trim()].filter(Boolean).join(" · "),
+            recordType: "HARVEST",
+            recordId: record.id
+          });
+        } catch (err) {
+          setError(err instanceof Error ? `수확기록은 저장됐지만 사진 저장에 실패했습니다: ${err.message}` : "수확기록은 저장됐지만 사진 저장에 실패했습니다.");
+        } finally {
+          setRecordPhotoSaving("");
+        }
+      }
       setHarvestDate(todayIsoDate());
       setHarvestPlantId("");
       setHarvestQty("1");
