@@ -1536,7 +1536,13 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   }
   .span-2 { grid-column: auto; }
   .photo-card { grid-template-columns: 84px minmax(0, 1fr); }
-  .overview-photo-item { grid-template-columns: 50px minmax(0, 1fr); }
+  .overview-photo-item {
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .overview-photo-item p {
+    min-width: 0;
+  }
   .overview-photo-thumb { width: 50px; height: 40px; }
   .photo-thumb-button { width: 84px; }
   .bed-overlay strong { font-size: 10px; }
