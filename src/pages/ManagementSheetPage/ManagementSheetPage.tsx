@@ -458,7 +458,8 @@ export default function ManagementSheetPage() {
 
   async function onAddObservation(event: FormEvent) {
     event.preventDefault();
-    if (!observationContent.trim()) {
+    const resolvedContent = observationContent.trim() || (recordPhotoFiles.observation ? "사진 관찰기록" : "");
+    if (!resolvedContent) {
       setError("관찰 내용을 입력해 주세요.");
       return;
     }
@@ -469,7 +470,7 @@ export default function ManagementSheetPage() {
         if (recordPhotoFiles.observation) setRecordPhotoSaving("observation");
         photo = recordPhotoFiles.observation ? await prepareAttachedPhoto(recordPhotoFiles.observation, {
           photoDate: observationDate,
-          description: `관찰기록: ${observationContent.trim()}`
+          description: `관찰기록: ${resolvedContent}`
         }) : undefined;
       } finally {
         setRecordPhotoSaving("");
@@ -478,7 +479,7 @@ export default function ManagementSheetPage() {
         managementSheetId: activeSheet.id,
         managementSheetPlantId,
         observedDate: observationDate,
-        content: observationContent.trim()
+        content: resolvedContent
       }, photo);
       setObservationDate(todayIsoDate());
       setObservationPlantId("");
@@ -494,7 +495,9 @@ export default function ManagementSheetPage() {
 
   async function onAddPestRecord(event: FormEvent) {
     event.preventDefault();
-    if (!pestType.trim() && !pestSymptom.trim()) {
+    const resolvedPestType = pestType.trim() || (recordPhotoFiles.pest ? "사진기록" : "");
+    const resolvedPestSymptom = pestSymptom.trim() || (recordPhotoFiles.pest ? "사진으로 기록" : "");
+    if (!resolvedPestType && !resolvedPestSymptom) {
       setError("병해충명 또는 증상을 입력해 주세요.");
       return;
     }
@@ -505,7 +508,7 @@ export default function ManagementSheetPage() {
         if (recordPhotoFiles.pest) setRecordPhotoSaving("pest");
         photo = recordPhotoFiles.pest ? await prepareAttachedPhoto(recordPhotoFiles.pest, {
           photoDate: pestDate,
-          description: ["병해충기록", pestType.trim() || "미지정", pestSymptom.trim(), pestAction.trim()].filter(Boolean).join(": ")
+          description: ["병해충기록", resolvedPestType || "미지정", resolvedPestSymptom, pestAction.trim()].filter(Boolean).join(": ")
         }) : undefined;
       } finally {
         setRecordPhotoSaving("");
@@ -514,9 +517,9 @@ export default function ManagementSheetPage() {
         managementSheetId: activeSheet.id,
         managementSheetPlantId,
         detectedDate: pestDate,
-        pestType: pestType.trim() || "미지정",
+        pestType: resolvedPestType || "미지정",
         severity: pestSeverity,
-        symptom: pestSymptom,
+        symptom: resolvedPestSymptom,
         action: pestAction
       }, photo);
       setPestDate(todayIsoDate());
