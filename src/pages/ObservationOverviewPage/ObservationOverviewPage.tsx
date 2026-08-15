@@ -26,7 +26,7 @@ export default function ObservationOverviewPage() {
   }
 
   async function onDelete(id: string) {
-    if (!window.confirm("이 관찰메모를 삭제하시겠습니까?")) return;
+    if (!window.confirm("이 관찰기록을 삭제하시겠습니까?")) return;
     await deleteObservationMemo(id);
   }
 
@@ -35,7 +35,7 @@ export default function ObservationOverviewPage() {
       <header className="page-header">
         <div>
           <p className="eyebrow">전체 현황</p>
-          <h1>관찰메모</h1>
+          <h1>관찰기록</h1>
         </div>
       </header>
 
@@ -48,7 +48,7 @@ export default function ObservationOverviewPage() {
           <section className="panel zone-overview" key={zone.id}>
             <div className="card-title-row">
               <h2>Zone {zone.zoneNumber}</h2>
-              <small>{records.length}개 메모</small>
+              <small>{records.length}개 기록</small>
             </div>
             <div className="timeline">
               {records.map((item) => {
@@ -65,7 +65,7 @@ export default function ObservationOverviewPage() {
                 );
               })}
             </div>
-            {records.length === 0 && <p className="empty-text">등록된 관찰메모가 없습니다.</p>}
+            {records.length === 0 && <p className="empty-text">등록된 관찰기록이 없습니다.</p>}
           </section>
         );
       })}

@@ -979,6 +979,12 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.record-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
+  gap: 10px;
+  align-items: center;
+}
 .plant-card button {
   justify-self: auto;
 }
@@ -1552,7 +1558,7 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
     grid-template-columns: minmax(0, 1fr) 64px;
   }
   .info-grid { grid-template-columns: 1fr; gap: 4px; }
-  .work-log-grid, .harvest-grid, .record-grid, .cultivation-info, .plant-form-grid, .photo-form { grid-template-columns: 1fr; }
+  .work-log-grid, .harvest-grid, .record-grid, .cultivation-info, .plant-form-grid, .photo-form, .record-action-row { grid-template-columns: 1fr; }
   .repeat-row { grid-template-columns: minmax(0, 1fr) 72px minmax(150px, 1.25fr); }
   .repeat-row input[type="date"] {
     font-size: 15px;

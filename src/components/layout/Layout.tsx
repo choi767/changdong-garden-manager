@@ -6,7 +6,7 @@ const navItems = [
   { to: "/", label: "홈", icon: Home },
   { to: "/groups", label: "그룹", icon: Layers3 },
   { to: "/tasks", label: "작업", icon: CalendarCheck },
-  { to: "/observations", label: "메모", icon: Eye },
+  { to: "/observations", label: "관찰", icon: Eye },
   { to: "/pests", label: "병충", icon: Bug },
   { to: "/harvests", label: "수확", icon: PackageCheck },
   { to: "/photos", label: "사진", icon: Camera },

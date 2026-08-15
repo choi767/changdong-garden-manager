@@ -207,6 +207,12 @@ export default function ManagementSheetPage() {
   const [photoSaved, setPhotoSaved] = useState(false);
   const [photoInputKey, setPhotoInputKey] = useState(0);
   const photoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const observationPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const pestPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const harvestPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [recordPhotoSaving, setRecordPhotoSaving] = useState("");
+  const [recordPhotoSaved, setRecordPhotoSaved] = useState("");
+  const [recordPhotoInputKeys, setRecordPhotoInputKeys] = useState({ observation: 0, pest: 0, harvest: 0 });
   const [previewPhoto, setPreviewPhoto] = useState<{ photo: Photo; url: string } | null>(null);
   const [materialDate, setMaterialDate] = useState(todayIsoDate());
   const [materialName, setMaterialName] = useState("");
@@ -231,6 +237,12 @@ export default function ManagementSheetPage() {
     const timer = window.setTimeout(() => setPhotoSaved(false), 2500);
     return () => window.clearTimeout(timer);
   }, [photoSaved]);
+
+  useEffect(() => {
+    if (!recordPhotoSaved) return;
+    const timer = window.setTimeout(() => setRecordPhotoSaved(""), 2500);
+    return () => window.clearTimeout(timer);
+  }, [recordPhotoSaved]);
 
   if (!data) return null;
   const sheet = data.managementSheets.find((item) => item.id === sheetId);
@@ -436,7 +448,7 @@ export default function ManagementSheetPage() {
   }
 
   async function onDeleteObservation(memoId: string) {
-    await runConfirmed("이 관찰메모를 삭제하시겠습니까?", () => deleteObservationMemo(memoId));
+    await runConfirmed("이 관찰기록을 삭제하시겠습니까?", () => deleteObservationMemo(memoId));
   }
 
   async function onAddPestRecord(event: FormEvent) {
@@ -570,29 +582,35 @@ export default function ManagementSheetPage() {
     await runConfirmed("이 수확기록을 삭제하시겠습니까?", () => deleteHarvestRecord(harvestRecordId));
   }
 
-  async function onPhotoFileChange(file: File | undefined) {
+  async function savePhotoFile(file: File | undefined, input: { managementSheetPlantId: string | null; photoDate: string; description: string }) {
     if (!file) {
-      setError("업로드할 사진을 선택해 주세요.");
-      return;
+      throw new Error("업로드할 사진을 선택해 주세요.");
     }
     if (!file.type.startsWith("image/")) {
-      setError("사진 파일만 업로드할 수 있습니다.");
-      return;
+      throw new Error("사진 파일만 업로드할 수 있습니다.");
     }
+    setError("");
+    const compressed = await compressPhoto(file);
+    await addPhoto({
+      managementSheetId: activeSheet.id,
+      managementSheetPlantId: input.managementSheetPlantId,
+      imageBlob: compressed.imageBlob,
+      thumbnailBlob: compressed.thumbnailBlob,
+      mimeType: compressed.mimeType,
+      fileSize: compressed.fileSize,
+      description: input.description,
+      photoDate: input.photoDate
+    });
+  }
+
+  async function onPhotoFileChange(file: File | undefined) {
     setPhotoSaving(true);
     setPhotoSaved(false);
-    setError("");
     try {
-      const compressed = await compressPhoto(file);
-      await addPhoto({
-        managementSheetId: activeSheet.id,
+      await savePhotoFile(file, {
         managementSheetPlantId: optionalLinkedPlantId(photoPlantId) || null,
-        imageBlob: compressed.imageBlob,
-        thumbnailBlob: compressed.thumbnailBlob,
-        mimeType: compressed.mimeType,
-        fileSize: compressed.fileSize,
-        description: photoDescription,
-        photoDate
+        photoDate,
+        description: photoDescription
       });
       setPhotoDate(todayIsoDate());
       setPhotoPlantId("");
@@ -603,6 +621,34 @@ export default function ManagementSheetPage() {
     } finally {
       setPhotoInputKey((prev) => prev + 1);
       setPhotoSaving(false);
+    }
+  }
+
+  function recordPhotoLabel(kind: "observation" | "pest" | "harvest"): string {
+    if (recordPhotoSaving === kind) return "압축 저장 중...";
+    if (recordPhotoSaved === kind) return "저장했습니다";
+    return "사진 올리기";
+  }
+
+  function recordPhotoButtonClass(kind: "observation" | "pest" | "harvest"): string {
+    return `secondary-button photo-file-button ${recordPhotoSaved === kind ? "upload-done" : ""}`;
+  }
+
+  async function onRecordPhotoFileChange(
+    kind: "observation" | "pest" | "harvest",
+    file: File | undefined,
+    input: { managementSheetPlantId: string | null; photoDate: string; description: string }
+  ) {
+    setRecordPhotoSaving(kind);
+    setRecordPhotoSaved("");
+    try {
+      await savePhotoFile(file, input);
+      setRecordPhotoSaved(kind);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "사진 저장에 실패했습니다.");
+    } finally {
+      setRecordPhotoInputKeys((keys) => ({ ...keys, [kind]: keys[kind] + 1 }));
+      setRecordPhotoSaving("");
     }
   }
 
@@ -936,7 +982,7 @@ export default function ManagementSheetPage() {
         </form>
 
         <form className="panel form-stack" onSubmit={onAddObservation}>
-          <h2>관찰메모</h2>
+          <h2>관찰기록</h2>
           <div className="record-grid">
             <label>
               관찰일
@@ -954,7 +1000,30 @@ export default function ManagementSheetPage() {
               <textarea value={observationContent} onChange={(event) => setObservationContent(event.target.value)} placeholder="생육 상태, 색 변화, 특이사항 등을 기록하세요" />
             </label>
           </div>
-          <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE"}>관찰메모 저장</button>
+          <div className="record-action-row">
+            <button className="primary-button" type="submit" disabled={sheet.status !== "ACTIVE"}>관찰기록 저장</button>
+            <button
+              className={recordPhotoButtonClass("observation")}
+              type="button"
+              onClick={() => observationPhotoFileInputRef.current?.click()}
+              disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE"}
+            >
+              <ImagePlus size={18} /> {recordPhotoLabel("observation")}
+            </button>
+            <input
+              key={recordPhotoInputKeys.observation}
+              ref={observationPhotoFileInputRef}
+              className="visually-hidden-file"
+              type="file"
+              accept={PHOTO_ACCEPT}
+              onChange={(event) => void onRecordPhotoFileChange("observation", event.target.files?.[0], {
+                managementSheetPlantId: optionalLinkedPlantId(observationPlantId) || null,
+                photoDate: observationDate,
+                description: `관찰기록${observationContent.trim() ? `: ${observationContent.trim()}` : ""}`
+              })}
+              disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE"}
+            />
+          </div>
           <div className="timeline">
             {observationMemos.map((item) => (
               <div className="timeline-item" key={item.id}>
@@ -963,7 +1032,7 @@ export default function ManagementSheetPage() {
               </div>
             ))}
           </div>
-          {observationMemos.length === 0 && <p className="empty-text">등록된 관찰메모가 없습니다.</p>}
+          {observationMemos.length === 0 && <p className="empty-text">등록된 관찰기록이 없습니다.</p>}
         </form>
 
         <form className="panel form-stack" onSubmit={onAddPestRecord}>
@@ -1001,7 +1070,35 @@ export default function ManagementSheetPage() {
               <textarea className="compact-textarea" value={pestAction} onChange={(event) => setPestAction(event.target.value)} placeholder="방제, 제거, 관찰 유지 등" />
             </label>
           </div>
-          <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE"}>병해충기록 저장</button>
+          <div className="record-action-row">
+            <button className="primary-button" type="submit" disabled={sheet.status !== "ACTIVE"}>병해충기록 저장</button>
+            <button
+              className={recordPhotoButtonClass("pest")}
+              type="button"
+              onClick={() => pestPhotoFileInputRef.current?.click()}
+              disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE"}
+            >
+              <ImagePlus size={18} /> {recordPhotoLabel("pest")}
+            </button>
+            <input
+              key={recordPhotoInputKeys.pest}
+              ref={pestPhotoFileInputRef}
+              className="visually-hidden-file"
+              type="file"
+              accept={PHOTO_ACCEPT}
+              onChange={(event) => void onRecordPhotoFileChange("pest", event.target.files?.[0], {
+                managementSheetPlantId: optionalLinkedPlantId(pestPlantId) || null,
+                photoDate: pestDate,
+                description: [
+                  "병해충기록",
+                  pestType.trim() || "",
+                  pestSymptom.trim() || "",
+                  pestAction.trim() || ""
+                ].filter(Boolean).join(": ")
+              })}
+              disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE"}
+            />
+          </div>
           <div className="timeline">
             {pestRecords.map((item) => (
               <div className="timeline-item" key={item.id}>
@@ -1155,7 +1252,36 @@ export default function ManagementSheetPage() {
               <textarea className="compact-textarea" value={harvestNotes} onChange={(event) => setHarvestNotes(event.target.value)} placeholder="필요시 수확 상태나 사용처를 기록하세요" />
             </label>
           </div>
-          <button className="primary-button wide" type="submit" disabled={!harvestPlantId || sheet.status !== "ACTIVE"}>수확 저장</button>
+          <div className="record-action-row">
+            <button className="primary-button" type="submit" disabled={!harvestPlantId || sheet.status !== "ACTIVE"}>수확 저장</button>
+            <button
+              className={recordPhotoButtonClass("harvest")}
+              type="button"
+              onClick={() => harvestPhotoFileInputRef.current?.click()}
+              disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE"}
+            >
+              <ImagePlus size={18} /> {recordPhotoLabel("harvest")}
+            </button>
+            <input
+              key={recordPhotoInputKeys.harvest}
+              ref={harvestPhotoFileInputRef}
+              className="visually-hidden-file"
+              type="file"
+              accept={PHOTO_ACCEPT}
+              onChange={(event) => void onRecordPhotoFileChange("harvest", event.target.files?.[0], {
+                managementSheetPlantId: harvestPlantId || null,
+                photoDate: harvestDate,
+                description: [
+                  "수확기록",
+                  harvestPlantId ? sheetPlantName(harvestPlantId) : "",
+                  `${harvestQty}${harvestUnit}`,
+                  harvestQuality,
+                  harvestNotes.trim()
+                ].filter(Boolean).join(" · ")
+              })}
+              disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE"}
+            />
+          </div>
           <div className="timeline">
             {visibleHarvestRecords.map((record) => {
               const sheetPlant = sheetPlants.find((item) => item.id === record.managementSheetPlantId);
@@ -1215,7 +1341,7 @@ export default function ManagementSheetPage() {
             disabled={photoSaving || sheet.status !== "ACTIVE"}
           />
         </div>
-        <p className="hint">PC에서는 파일을, 휴대폰에서는 갤러리 또는 구글포토를 선택하세요. 업로드한 사진은 저장 전에 긴 변 {PHOTO_MAX_SIDE}px 이하로 줄이고 JPEG로 압축합니다.</p>
+        <p className="hint">PC에서는 파일을, 휴대폰에서는 갤러리 또는 구글포토를 선택하세요. 휴대폰 파일 선택 화면에 갤러리가 바로 안 보이면 오른쪽 위 ... 메뉴에서 찾아보기를 누르세요. 업로드한 사진은 저장 전에 긴 변 {PHOTO_MAX_SIDE}px 이하로 줄이고 JPEG로 압축합니다.</p>
         <div className="photo-grid">
           {photos.map((photo) => {
             const sheetPlant = sheetPlants.find((item) => item.id === photo.managementSheetPlantId);

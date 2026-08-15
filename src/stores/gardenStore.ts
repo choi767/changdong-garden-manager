@@ -681,13 +681,13 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const data = requireData(get().data);
     const timestamp = nowIso();
     data.observationMemos.push({ ...input, id: makeId("observation"), createdAt: timestamp, updatedAt: timestamp });
-    await persist(set, data, "관찰메모를 저장했습니다.");
+    await persist(set, data, "관찰기록을 저장했습니다.");
   },
 
   async deleteObservationMemo(memoId) {
     const data = requireData(get().data);
     const exists = data.observationMemos.some((item) => item.id === memoId);
-    if (!exists) throw new Error("존재하지 않는 관찰메모입니다.");
+    if (!exists) throw new Error("존재하지 않는 관찰기록입니다.");
     data.observationMemos = data.observationMemos.filter((item) => item.id !== memoId);
     await persist(set, data, "삭제했습니다");
   },
