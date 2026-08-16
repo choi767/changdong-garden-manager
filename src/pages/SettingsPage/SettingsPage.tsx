@@ -188,28 +188,30 @@ export default function SettingsPage() {
         </article>
       </section>
 
-      <section className="panel">
-        <h2>틀 배치 좌표 편집</h2>
-        <form className="layout-editor" onSubmit={onSaveLayout}>
-          <label>
-            틀 선택
-            <select value={bedId} onChange={(event) => selectBed(event.target.value)}>
-              <option value="">선택</option>
-              {data.beds.map((item) => <option key={item.id} value={item.id}>{item.displayCode}</option>)}
-            </select>
-          </label>
-          {Object.keys(layout).map((key) => (
-            <label key={key}>
-              {key}
-              <input value={layout[key as keyof typeof layout]} onChange={(event) => setLayout({ ...layout, [key]: event.target.value })} />
+      {isAdmin && showAdminTools && (
+        <section className="panel">
+          <h2>틀 배치 좌표 편집</h2>
+          <form className="layout-editor" onSubmit={onSaveLayout}>
+            <label>
+              틀 선택
+              <select value={bedId} onChange={(event) => selectBed(event.target.value)}>
+                <option value="">선택</option>
+                {data.beds.map((item) => <option key={item.id} value={item.id}>{item.displayCode}</option>)}
+              </select>
             </label>
-          ))}
-          <button className="primary-button" type="submit" disabled={!bed}>좌표 저장</button>
-        </form>
-        <div className="preview-box">
-          {bed && <div className="preview-bed" style={{ left: `${Number(layout.positionX)}%`, top: `${Number(layout.positionY)}%`, width: `${Number(layout.width)}%`, height: `${Number(layout.height)}%`, rotate: `${Number(layout.rotation)}deg` }}>{bed.displayCode}</div>}
-        </div>
-      </section>
+            {Object.keys(layout).map((key) => (
+              <label key={key}>
+                {key}
+                <input value={layout[key as keyof typeof layout]} onChange={(event) => setLayout({ ...layout, [key]: event.target.value })} />
+              </label>
+            ))}
+            <button className="primary-button" type="submit" disabled={!bed}>좌표 저장</button>
+          </form>
+          <div className="preview-box">
+            {bed && <div className="preview-bed" style={{ left: `${Number(layout.positionX)}%`, top: `${Number(layout.positionY)}%`, width: `${Number(layout.width)}%`, height: `${Number(layout.height)}%`, rotate: `${Number(layout.rotation)}deg` }}>{bed.displayCode}</div>}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
