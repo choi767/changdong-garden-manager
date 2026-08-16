@@ -398,7 +398,6 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const group = data.managementGroups.find((item) => item.id === sheet.managementGroupId);
     if (!group) throw new Error("관리그룹을 찾을 수 없습니다.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) throw new Error("관리 종료일을 선택해 주세요.");
-    if (endDate < sheet.startDate) throw new Error("관리 종료일은 시작일보다 빠를 수 없습니다.");
     const timestamp = nowIso();
     sheet.status = "CLOSED";
     sheet.endDate = endDate;
