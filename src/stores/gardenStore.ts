@@ -75,7 +75,7 @@ interface GardenState {
   createGroup: (bedIds: string[], startDate: string) => Promise<ManagementSheet>;
   addBedsToGroup: (groupId: string, bedIds: string[]) => Promise<void>;
   removeBedsFromGroup: (groupId: string, bedIds: string[]) => Promise<void>;
-  closeManagement: (sheetId: string) => Promise<void>;
+  closeManagement: (sheetId: string, endDate: string) => Promise<void>;
   deleteManagement: (sheetId: string) => Promise<void>;
   restoreManagement: (sheetId: string) => Promise<void>;
   addPlant: (input: PlantFormInput) => Promise<void>;
@@ -391,18 +391,20 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     await persist(set, data, "선택한 틀을 관리그룹에서 삭제했습니다.");
   },
 
-  async closeManagement(sheetId) {
+  async closeManagement(sheetId, endDate) {
     const data = requireData(get().data);
     const sheet = data.managementSheets.find((item) => item.id === sheetId);
     if (!sheet) throw new Error("존재하지 않는 관리표입니다.");
     const group = data.managementGroups.find((item) => item.id === sheet.managementGroupId);
     if (!group) throw new Error("관리그룹을 찾을 수 없습니다.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) throw new Error("관리 종료일을 선택해 주세요.");
+    if (endDate < sheet.startDate) throw new Error("관리 종료일은 시작일보다 빠를 수 없습니다.");
     const timestamp = nowIso();
     sheet.status = "CLOSED";
-    sheet.endDate = todayIsoDate();
+    sheet.endDate = endDate;
     sheet.updatedAt = timestamp;
     group.status = "CLOSED";
-    group.endDate = todayIsoDate();
+    group.endDate = endDate;
     group.updatedAt = timestamp;
     for (const membership of getCurrentMemberships(data, group.id)) {
       membership.isCurrent = false;

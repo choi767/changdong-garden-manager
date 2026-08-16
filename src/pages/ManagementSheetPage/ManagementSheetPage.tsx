@@ -257,6 +257,8 @@ export default function ManagementSheetPage() {
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [frameModal, setFrameModal] = useState<"add" | "remove" | null>(null);
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [closeEndDate, setCloseEndDate] = useState(todayIsoDate());
   const [showAllScheduleReminders, setShowAllScheduleReminders] = useState(false);
   const [showAllWorkLogs, setShowAllWorkLogs] = useState(false);
   const [showAllHarvestRecords, setShowAllHarvestRecords] = useState(false);
@@ -410,6 +412,29 @@ export default function ManagementSheetPage() {
     await run(async () => {
       await addPlantToSheet(activeSheet.id, plantId);
       setPlantId("");
+    });
+  }
+
+  function openCloseManagementModal() {
+    setError("");
+    setCloseEndDate(todayIsoDate());
+    setCloseModalOpen(true);
+  }
+
+  async function onCloseManagement(event: FormEvent) {
+    event.preventDefault();
+    if (!dateInputValue(closeEndDate)) {
+      setError("관리 종료일을 선택해 주세요.");
+      return;
+    }
+    if (closeEndDate < activeSheet.startDate) {
+      setError("관리 종료일은 시작일보다 빠를 수 없습니다.");
+      return;
+    }
+    if (!window.confirm(`${closeEndDate} 날짜로 관리 종료하시겠습니까?`)) return;
+    await run(async () => {
+      await closeManagement(activeSheet.id, closeEndDate);
+      setCloseModalOpen(false);
     });
   }
 
@@ -860,7 +885,7 @@ export default function ManagementSheetPage() {
             <div className="button-row">
               <button className="secondary-button" type="button" onClick={() => setFrameModal("add")}>틀추가</button>
               <button className="secondary-button" type="button" onClick={() => setFrameModal("remove")}>틀삭제</button>
-              <button className="danger-button" type="button" onClick={() => void runConfirmed("관리 종료하시겠습니까?", () => closeManagement(sheet.id))}>관리 종료</button>
+              <button className="danger-button" type="button" onClick={openCloseManagementModal}>관리 종료</button>
               <button className="danger-button" type="button" onClick={() => void runConfirmed("이 관리표를 완전삭제하시겠습니까?\n삭제하면 관리표, 관리그룹, 식물 연결, 작업이력, 수확기록이 함께 삭제됩니다.", async () => {
                 await deleteManagement(sheet.id);
                 navigate("/");
@@ -1266,6 +1291,24 @@ export default function ManagementSheetPage() {
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {sheet.status === "ACTIVE" && closeModalOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <form className="modal-panel decision-modal form-stack" role="dialog" aria-modal="true" aria-labelledby="close-management-title" onSubmit={onCloseManagement}>
+            <h2 id="close-management-title">관리 종료일 선택</h2>
+            <p className="muted-text">과거에 이미 끝난 관리그룹은 실제 종료된 날짜를 선택하세요.</p>
+            <label>
+              관리 종료일
+              <input type="date" min={sheet.startDate} value={closeEndDate} onChange={(event) => setCloseEndDate(event.target.value)} />
+            </label>
+            <p className="hint">관리 시작일: {sheet.startDate}</p>
+            <div className="button-row">
+              <button className="danger-button" type="submit">선택한 날짜로 종료</button>
+              <button className="secondary-button" type="button" onClick={() => setCloseModalOpen(false)}>취소</button>
+            </div>
+          </form>
         </div>
       )}
 
