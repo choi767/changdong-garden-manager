@@ -3,7 +3,7 @@ import { createInitialData } from "../domain/services/seedData";
 import { validateAddSheetPlant, validateNewPlantName } from "../domain/services/plantRules";
 import { getNextGroupNumber, validateGroupBedSelection, validateRemoveBedsFromGroup } from "../domain/services/groupRules";
 
-describe("창동 틀밭관리 V2.0 업무 규칙", () => {
+describe("창동 틀밭관리 V2.1 업무 규칙", () => {
   it("초기 데이터는 Zone1 24개, Zone2 43개, Zone3 10개 틀을 만든다", () => {
     const data = createInitialData();
     expect(data.beds.filter((bed) => bed.zoneNumber === 1)).toHaveLength(24);
