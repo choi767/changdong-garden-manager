@@ -257,8 +257,9 @@ export default function CreateManagementGroupPage() {
           {zone && (
             <article className={`zone-map-board create-zone-map ${zoneLayout ? "zone-map-drawn" : "zone-map-fallback"}`}>
               <div className="zone-map-heading">
-                <h3>Zone {zone.zoneNumber}</h3>
+                <h3 className={zone.zoneNumber === 4 ? "zone-training-title" : ""}>Zone {zone.zoneNumber}</h3>
               </div>
+              {zone.zoneNumber === 4 && <p className="zone-training-note">연습용 구역입니다</p>}
               <div className={`zone-map-canvas zone-map-canvas-z${zone.zoneNumber}`}>
                 {zoneBeds.map((bed) => {
                   const label = bedMapLabel(bed.displayCode, zone.zoneNumber, bed.bedNumber);
@@ -293,7 +294,6 @@ export default function CreateManagementGroupPage() {
                   );
                 })}
               </div>
-              {zone.zoneNumber === 4 && <p className="zone-training-note">연습용 구역 입니다</p>}
             </article>
           )}
           {fallowBeds.length === 0 && <p className="empty-text">이 Zone에는 선택 가능한 휴경 틀이 없습니다.</p>}

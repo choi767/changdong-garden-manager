@@ -297,12 +297,13 @@ export default function HomePage() {
                 return (
                   <article className={`zone-map-board ${zoneLayout ? "zone-map-drawn" : "zone-map-fallback"}`} key={zone.id}>
                     <div className="zone-map-heading">
-                      <h3>Zone {zone.zoneNumber}</h3>
+                      <h3 className={zone.zoneNumber === 4 ? "zone-training-title" : ""}>Zone {zone.zoneNumber}</h3>
                       <div className="zone-map-legend" aria-label="범례">
                         <span><i className="legend-box active" />경작</span>
                         <span><i className="legend-box fallow" />휴경</span>
                       </div>
                     </div>
+                    {zone.zoneNumber === 4 && <p className="zone-training-note">연습용 구역입니다</p>}
                     <div className={`zone-map-canvas zone-map-canvas-z${zone.zoneNumber}`}>
                       {zoneBeds.map((bed) => {
                         const activeGroup = getActiveGroupForBedId(appData, bed.id);
@@ -340,7 +341,6 @@ export default function HomePage() {
                         );
                       })}
                     </div>
-                    {zone.zoneNumber === 4 && <p className="zone-training-note">연습용 구역 입니다</p>}
                   </article>
                 );
               })}
