@@ -55,7 +55,7 @@ export default function HistoryPage() {
         const currentBeds = group ? getCurrentBedsForGroup(data, group.id) : [];
         const pastBeds = group ? getPastBedsForGroup(data, group.id) : [];
         const allBeds = [...currentBeds, ...pastBeds];
-        const plants = getSheetPlants(data, sheet.id).map((item) => item.plant?.name ?? "");
+        const plants = Array.from(new Set(getSheetPlants(data, sheet.id).map((item) => item.plant?.name ?? "").filter(Boolean)));
         return { sheet, group, beds: allBeds, plants };
       })
       .filter((row) => !filters.year || row.sheet.startDate.startsWith(filters.year))
@@ -110,7 +110,10 @@ export default function HistoryPage() {
         {rows.map((row) => (
           <article className="card" key={row.sheet.id}>
             <div className="card-title-row">
-              <strong>{row.group?.displayCode}</strong>
+              <strong className="history-result-title">
+                {row.group?.displayCode}
+                {row.plants.length > 0 && <span className="history-result-plants">({row.plants.join(", ")})</span>}
+              </strong>
               <Link to={`/sheets/${row.sheet.id}`}>상세</Link>
             </div>
             <p>{getBedLabelList(row.beds)}</p>

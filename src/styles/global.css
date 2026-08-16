@@ -1262,6 +1262,18 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   color: #9a1f16;
   font-weight: 900;
 }
+.history-result-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.history-result-plants {
+  color: #0f5faa;
+  font-size: 14px;
+  font-weight: 900;
+}
 .pending-text {
   color: #9a5b00 !important;
   font-weight: 900;
