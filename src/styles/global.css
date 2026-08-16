@@ -163,6 +163,11 @@ h2 { font-size: 19px; }
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
+.admin-warning {
+  margin: 8px 0 0;
+  color: #9a1f16;
+  font-weight: 900;
+}
 .compact-list {
   gap: 6px;
   margin-top: 12px;

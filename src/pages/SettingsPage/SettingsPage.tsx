@@ -1,6 +1,13 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Download, RefreshCcw, Trash2, Upload } from "lucide-react";
+import { getSupabaseClient } from "../../infrastructure/supabaseClient";
 import { useGardenStore } from "../../stores/gardenStore";
+
+const ADMIN_EMAILS = ["wchoi58@gmail.com"];
+
+function normalizeEmail(value: string | undefined): string {
+  return (value ?? "").trim().toLocaleLowerCase("en-US");
+}
 
 export default function SettingsPage() {
   const data = useGardenStore((state) => state.data);
@@ -12,7 +19,28 @@ export default function SettingsPage() {
   const [bedId, setBedId] = useState("");
   const [error, setError] = useState("");
   const [showAdminTools, setShowAdminTools] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const [layout, setLayout] = useState({ positionX: "0", positionY: "0", width: "5", height: "5", rotation: "0" });
+  const isAdmin = ADMIN_EMAILS.includes(normalizeEmail(userEmail));
+
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client) {
+      setUserEmail(ADMIN_EMAILS[0]);
+      return;
+    }
+    let mounted = true;
+    void client.auth.getUser().then(({ data }) => {
+      if (mounted) setUserEmail(data.user?.email ?? "");
+    });
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user.email ?? "");
+    });
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   const zoneRows = useMemo(() => {
     if (!data) return [];
@@ -76,6 +104,11 @@ export default function SettingsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     setError("");
+    if (!isAdmin) {
+      setError("관리자만 JSON 복원을 실행할 수 있습니다.");
+      event.target.value = "";
+      return;
+    }
     try {
       await importJson(await file.text());
     } catch (err) {
@@ -86,11 +119,19 @@ export default function SettingsPage() {
   }
 
   async function onResetDevelopmentData() {
+    if (!isAdmin) {
+      setError("관리자만 개발용 초기화를 실행할 수 있습니다.");
+      return;
+    }
     if (!window.confirm("개발용 초기화를 실행하시겠습니까?\n관리그룹, 관리표, 작업/일정/사진/수확 등 기록은 초기화되지만 식물DB는 보존됩니다.")) return;
     await resetData();
   }
 
   async function onDeleteAllPlants() {
+    if (!isAdmin) {
+      setError("관리자만 식물DB 전체삭제를 실행할 수 있습니다.");
+      return;
+    }
     if (!window.confirm("식물DB 전체를 삭제하시겠습니까?\n등록된 식물과 관리표의 식물 연결 정보가 삭제됩니다.")) return;
     if (!window.confirm("정말 삭제하시겠습니까? 이 작업은 JSON 백업 없이는 되돌릴 수 없습니다.")) return;
     await deleteAllPlants();
@@ -130,10 +171,11 @@ export default function SettingsPage() {
             <button className="primary-button" type="button" onClick={() => void onExport()}><Download size={18} /> JSON 백업</button>
           </div>
           <label className="admin-toggle">
-            <input type="checkbox" checked={showAdminTools} onChange={(event) => setShowAdminTools(event.target.checked)} />
+            <input type="checkbox" checked={showAdminTools && isAdmin} disabled={!isAdmin} onChange={(event) => setShowAdminTools(event.target.checked)} />
             관리자 기능 보기
           </label>
-          {showAdminTools && (
+          <p className={isAdmin ? "hint" : "admin-warning"}>{isAdmin ? `관리자 계정: ${userEmail}` : "관리자 계정으로 로그인해야 JSON 복원/초기화/전체삭제를 실행할 수 있습니다."}</p>
+          {showAdminTools && isAdmin && (
             <div className="admin-tools">
               <label className="secondary-button file-button">
                 <Upload size={18} /> JSON 복원
