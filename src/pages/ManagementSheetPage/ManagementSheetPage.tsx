@@ -254,6 +254,7 @@ export default function ManagementSheetPage() {
   const [materialCost, setMaterialCost] = useState("0");
   const [materialMemo, setMaterialMemo] = useState("");
   const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [frameModal, setFrameModal] = useState<"add" | "remove" | null>(null);
   const [showAllScheduleReminders, setShowAllScheduleReminders] = useState(false);
   const [showAllWorkLogs, setShowAllWorkLogs] = useState(false);
@@ -316,10 +317,13 @@ export default function ManagementSheetPage() {
 
   async function run(action: () => Promise<void>) {
     setError("");
+    setIsSaving(true);
     try {
       await action();
     } catch (err) {
       setError(err instanceof Error ? err.message : "작업에 실패했습니다.");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -827,6 +831,7 @@ export default function ManagementSheetPage() {
         </div>
       </header>
       <div className="sheet-scroll-area">
+        {isSaving && <div className="loading-bar saving-bar">저장 중입니다...</div>}
         {error && <p className="form-error">{error}</p>}
 
       <section className="dashboard-grid">

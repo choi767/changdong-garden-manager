@@ -516,29 +516,29 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addPlantToSheet(sheetId, plantId) {
-    const data = requireData(get().data);
-    const sheet = data.managementSheets.find((item) => item.id === sheetId);
-    if (!sheet || sheet.status !== "ACTIVE") throw new Error("활성 관리표에만 식물을 등록할 수 있습니다.");
-    const plant = data.plants.find((item) => item.id === plantId);
-    if (!plant) throw new Error("존재하지 않는 식물입니다.");
-    const validation = validateAddSheetPlant(data.sheetPlants, sheetId, plantId);
-    if (validation) throw new Error(validation);
-    const timestamp = nowIso();
-    data.sheetPlants.push({
-      id: makeId("sheetPlant"),
-      managementSheetId: sheetId,
-      plantId,
-      plantedDate: "",
-      plantingMethod: "",
-      expectedHarvestPeriod: "",
-      finalHarvestDate: "",
-      cultivationStatus: "",
-      notes: "",
-      isActive: true,
-      createdAt: timestamp,
-      updatedAt: timestamp
+    await persistMutation(set, () => get().data, "관리표에 식물을 추가했습니다.", (data) => {
+      const sheet = data.managementSheets.find((item) => item.id === sheetId);
+      if (!sheet || sheet.status !== "ACTIVE") throw new Error("활성 관리표에만 식물을 등록할 수 있습니다.");
+      const plant = data.plants.find((item) => item.id === plantId);
+      if (!plant) throw new Error("존재하지 않는 식물입니다.");
+      const validation = validateAddSheetPlant(data.sheetPlants, sheetId, plantId);
+      if (validation) throw new Error(validation);
+      const timestamp = nowIso();
+      data.sheetPlants.push({
+        id: makeId("sheetPlant"),
+        managementSheetId: sheetId,
+        plantId,
+        plantedDate: "",
+        plantingMethod: "",
+        expectedHarvestPeriod: "",
+        finalHarvestDate: "",
+        cultivationStatus: "",
+        notes: "",
+        isActive: true,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      });
     });
-    await persist(set, data, "관리표에 식물을 추가했습니다.");
   },
 
   async updateSheetPlant(sheetPlantId, input) {
@@ -560,10 +560,10 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addWorkLog(input) {
-    const data = requireData(get().data);
-    const timestamp = nowIso();
-    data.workLogs.push({ ...input, id: makeId("work"), batchId: null, createdAt: timestamp, updatedAt: timestamp });
-    await persist(set, data, "작업이력을 저장했습니다.");
+    await persistMutation(set, () => get().data, "작업이력을 저장했습니다.", (data) => {
+      const timestamp = nowIso();
+      data.workLogs.push({ ...input, id: makeId("work"), batchId: null, createdAt: timestamp, updatedAt: timestamp });
+    });
   },
 
   async deleteWorkLog(workLogId) {
@@ -575,27 +575,27 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addZoneWorkLog(zoneId, workDate, workType, content) {
-    const data = requireData(get().data);
-    const activeGroups = data.managementGroups.filter((group) => group.zoneId === zoneId && group.status === "ACTIVE");
-    const activeSheets = data.managementSheets.filter((sheet) => activeGroups.some((group) => group.id === sheet.managementGroupId) && sheet.status === "ACTIVE");
-    if (activeSheets.length === 0) throw new Error("해당 Zone에 활성 관리표가 없습니다.");
-    const timestamp = nowIso();
-    const batchId = makeId("batch");
-    for (const sheet of activeSheets) {
-      data.workLogs.push({
-        id: makeId("work"),
-        managementSheetId: sheet.id,
-        managementSheetPlantId: null,
-        workDate,
-        workType,
-        content,
-        author: "사용자",
-        batchId,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      });
-    }
-    await persist(set, data, "Zone 전체 작업이력을 저장했습니다.");
+    await persistMutation(set, () => get().data, "Zone 전체 작업이력을 저장했습니다.", (data) => {
+      const activeGroups = data.managementGroups.filter((group) => group.zoneId === zoneId && group.status === "ACTIVE");
+      const activeSheets = data.managementSheets.filter((sheet) => activeGroups.some((group) => group.id === sheet.managementGroupId) && sheet.status === "ACTIVE");
+      if (activeSheets.length === 0) throw new Error("해당 Zone에 활성 관리표가 없습니다.");
+      const timestamp = nowIso();
+      const batchId = makeId("batch");
+      for (const sheet of activeSheets) {
+        data.workLogs.push({
+          id: makeId("work"),
+          managementSheetId: sheet.id,
+          managementSheetPlantId: null,
+          workDate,
+          workType,
+          content,
+          author: "사용자",
+          batchId,
+          createdAt: timestamp,
+          updatedAt: timestamp
+        });
+      }
+    });
   },
 
   async addHarvestRecord(input, photo) {
@@ -642,65 +642,65 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addScheduleReminder(input) {
-    const data = requireData(get().data);
-    const timestamp = nowIso();
-    data.scheduleReminders.push({ ...input, id: makeId("schedule"), isDone: false, completedAt: null, batchId: null, createdAt: timestamp, updatedAt: timestamp });
-    await persist(set, data, "다음일정을 저장했습니다.");
+    await persistMutation(set, () => get().data, "다음일정을 저장했습니다.", (data) => {
+      const timestamp = nowIso();
+      data.scheduleReminders.push({ ...input, id: makeId("schedule"), isDone: false, completedAt: null, batchId: null, createdAt: timestamp, updatedAt: timestamp });
+    });
   },
 
   async addZoneScheduleReminder(zoneId, dueDate, category, content) {
-    const data = requireData(get().data);
-    const activeGroups = data.managementGroups.filter((group) => group.zoneId === zoneId && group.status === "ACTIVE");
-    const activeSheets = data.managementSheets.filter((sheet) => activeGroups.some((group) => group.id === sheet.managementGroupId) && sheet.status === "ACTIVE");
-    if (activeSheets.length === 0) throw new Error("해당 Zone에 활성 관리표가 없습니다.");
-    const timestamp = nowIso();
-    const batchId = makeId("scheduleBatch");
-    for (const sheet of activeSheets) {
-      data.scheduleReminders.push({
-        id: makeId("schedule"),
-        managementSheetId: sheet.id,
-        managementSheetPlantId: null,
-        dueDate,
-        category,
-        content,
-        isDone: false,
-        completedAt: null,
-        batchId,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      });
-    }
-    await persist(set, data, "Zone 전체 다음일정을 저장했습니다.");
+    await persistMutation(set, () => get().data, "Zone 전체 다음일정을 저장했습니다.", (data) => {
+      const activeGroups = data.managementGroups.filter((group) => group.zoneId === zoneId && group.status === "ACTIVE");
+      const activeSheets = data.managementSheets.filter((sheet) => activeGroups.some((group) => group.id === sheet.managementGroupId) && sheet.status === "ACTIVE");
+      if (activeSheets.length === 0) throw new Error("해당 Zone에 활성 관리표가 없습니다.");
+      const timestamp = nowIso();
+      const batchId = makeId("scheduleBatch");
+      for (const sheet of activeSheets) {
+        data.scheduleReminders.push({
+          id: makeId("schedule"),
+          managementSheetId: sheet.id,
+          managementSheetPlantId: null,
+          dueDate,
+          category,
+          content,
+          isDone: false,
+          completedAt: null,
+          batchId,
+          createdAt: timestamp,
+          updatedAt: timestamp
+        });
+      }
+    });
   },
 
   async completeScheduleReminder(reminderId, scope = "batch") {
-    const data = requireData(get().data);
-    const reminder = data.scheduleReminders.find((item) => item.id === reminderId);
-    if (!reminder) throw new Error("존재하지 않는 일정입니다.");
-    if (reminder.isDone) throw new Error("이미 완료 처리된 일정입니다.");
-    const timestamp = nowIso();
-    const targets = scope === "batch" && reminder.batchId
-      ? data.scheduleReminders.filter((item) => item.batchId === reminder.batchId && !item.isDone)
-      : [reminder];
-    const workBatchId = targets.length > 1 ? makeId("batch") : null;
-    for (const target of targets) {
-      target.isDone = true;
-      target.completedAt = timestamp;
-      target.updatedAt = timestamp;
-      data.workLogs.push({
-        id: makeId("work"),
-        managementSheetId: target.managementSheetId,
-        managementSheetPlantId: target.managementSheetPlantId,
-        workDate: todayIsoDate(),
-        workType: target.category,
-        content: target.content,
-        author: "사용자",
-        batchId: workBatchId,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      });
-    }
-    await persist(set, data, "완료 처리하고 작업이력에 기록했습니다.");
+    await persistMutation(set, () => get().data, "완료 처리하고 작업이력에 기록했습니다.", (data) => {
+      const reminder = data.scheduleReminders.find((item) => item.id === reminderId);
+      if (!reminder) throw new Error("존재하지 않는 일정입니다.");
+      if (reminder.isDone) throw new Error("이미 완료 처리된 일정입니다.");
+      const timestamp = nowIso();
+      const targets = scope === "batch" && reminder.batchId
+        ? data.scheduleReminders.filter((item) => item.batchId === reminder.batchId && !item.isDone)
+        : [reminder];
+      const workBatchId = targets.length > 1 ? makeId("batch") : null;
+      for (const target of targets) {
+        target.isDone = true;
+        target.completedAt = timestamp;
+        target.updatedAt = timestamp;
+        data.workLogs.push({
+          id: makeId("work"),
+          managementSheetId: target.managementSheetId,
+          managementSheetPlantId: target.managementSheetPlantId,
+          workDate: todayIsoDate(),
+          workType: target.category,
+          content: target.content,
+          author: "사용자",
+          batchId: workBatchId,
+          createdAt: timestamp,
+          updatedAt: timestamp
+        });
+      }
+    });
   },
 
   async toggleScheduleReminder(reminderId) {
@@ -774,10 +774,10 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addMaterialUsage(input) {
-    const data = requireData(get().data);
-    const timestamp = nowIso();
-    data.materialUsages.push({ ...input, id: makeId("material"), createdAt: timestamp, updatedAt: timestamp });
-    await persist(set, data, "비용/자재사용을 저장했습니다.");
+    await persistMutation(set, () => get().data, "비용/자재사용을 저장했습니다.", (data) => {
+      const timestamp = nowIso();
+      data.materialUsages.push({ ...input, id: makeId("material"), createdAt: timestamp, updatedAt: timestamp });
+    });
   },
 
   async deleteMaterialUsage(materialUsageId) {
@@ -789,15 +789,15 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async upsertSheetEvaluation(input) {
-    const data = requireData(get().data);
-    const timestamp = nowIso();
-    const evaluation = data.sheetEvaluations.find((item) => item.managementSheetId === input.managementSheetId);
-    if (evaluation) {
-      Object.assign(evaluation, input, { updatedAt: timestamp });
-    } else {
-      data.sheetEvaluations.push({ ...input, id: makeId("evaluation"), createdAt: timestamp, updatedAt: timestamp });
-    }
-    await persist(set, data, "요약/평가를 저장했습니다.");
+    await persistMutation(set, () => get().data, "요약/평가를 저장했습니다.", (data) => {
+      const timestamp = nowIso();
+      const evaluation = data.sheetEvaluations.find((item) => item.managementSheetId === input.managementSheetId);
+      if (evaluation) {
+        Object.assign(evaluation, input, { updatedAt: timestamp });
+      } else {
+        data.sheetEvaluations.push({ ...input, id: makeId("evaluation"), createdAt: timestamp, updatedAt: timestamp });
+      }
+    });
   },
 
   async updateBedLayout(bedId, patch) {
