@@ -80,7 +80,7 @@ export default function HistoryPage() {
         <input value={bedNo} onChange={(event) => setBedNo(event.target.value)} placeholder="틀 번호" />
         <input value={plantQuery} onChange={(event) => setPlantQuery(event.target.value)} placeholder="식물명" />
       </section>
-      <p className="hint">입력값 모두 동시에 만족되는 결과만 보여줍니다. 틀번호와 식물명은 관리표에 포함된 항목 중 하나라도 일치하면 검색됩니다.</p>
+      <p className="hint history-filter-hint">5가지 값중 1가지 이상 입력하세요. 입력한 조건을 모두 만족하는 결과만 보여줍니다. 틀번호와 식물명은 관리표에 포함된 항목 중 하나라도 일치하면 검색됩니다.</p>
 
       <section className="card-list">
         {rows.map((row) => (

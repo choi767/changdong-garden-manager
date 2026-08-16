@@ -6,6 +6,17 @@ import { router } from "./router";
 
 const PULL_REFRESH_THRESHOLD = 78;
 const PULL_REFRESH_MAX = 112;
+const APP_ASSET_PATTERN = /\/assets\/index-[^"']+\.js/;
+
+function getCurrentAppAsset(): string {
+  const scripts = Array.from(document.scripts);
+  const assetScript = scripts.find((script) => APP_ASSET_PATTERN.test(script.src));
+  return assetScript?.src.match(APP_ASSET_PATTERN)?.[0] ?? "";
+}
+
+function getLatestAppAssetFromHtml(html: string): string {
+  return html.match(APP_ASSET_PATTERN)?.[0] ?? "";
+}
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest("input, textarea, select, button, a"));
@@ -109,17 +120,76 @@ function PullToRefresh({ onRefresh, disabled }: { onRefresh: () => Promise<void>
   );
 }
 
+function UpdateBanner({ currentAsset, latestAsset }: { currentAsset: string; latestAsset: string }) {
+  function applyUpdate() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("updated", String(Date.now()));
+    window.location.replace(url.toString());
+  }
+
+  return (
+    <div className="update-banner" role="status" aria-live="polite">
+      <span>새 업데이트가 있습니다. 최신 버전으로 다시 불러오세요.</span>
+      <small>{currentAsset.split("/").pop()} → {latestAsset.split("/").pop()}</small>
+      <button className="secondary-button compact-action" type="button" onClick={applyUpdate}>업데이트 적용</button>
+    </div>
+  );
+}
+
 function AppContent() {
   const load = useGardenStore((state) => state.load);
   const loading = useGardenStore((state) => state.loading);
+  const [latestAsset, setLatestAsset] = useState("");
+  const currentAssetRef = useRef(getCurrentAppAsset());
+
+  async function checkForUpdate() {
+    try {
+      const response = await fetch(`/?update-check=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" }
+      });
+      const html = await response.text();
+      const nextAsset = getLatestAppAssetFromHtml(html);
+      if (nextAsset && currentAssetRef.current && nextAsset !== currentAssetRef.current) {
+        setLatestAsset(nextAsset);
+      }
+    } catch {
+      // Update checks should never block ordinary app use.
+    }
+  }
 
   useEffect(() => {
     void load();
+    void checkForUpdate();
   }, [load]);
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") void checkForUpdate();
+    }
+
+    window.addEventListener("focus", checkForUpdate);
+    window.addEventListener("online", checkForUpdate);
+    window.addEventListener("pageshow", checkForUpdate);
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = window.setInterval(() => void checkForUpdate(), 5 * 60 * 1000);
+    return () => {
+      window.removeEventListener("focus", checkForUpdate);
+      window.removeEventListener("online", checkForUpdate);
+      window.removeEventListener("pageshow", checkForUpdate);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  async function refreshAppData() {
+    await Promise.all([load(), checkForUpdate()]);
+  }
 
   return (
     <>
-      <PullToRefresh onRefresh={load} disabled={loading} />
+      <PullToRefresh onRefresh={refreshAppData} disabled={loading} />
+      {latestAsset && <UpdateBanner currentAsset={currentAssetRef.current} latestAsset={latestAsset} />}
       {loading && <div className="loading-bar">데이터를 불러오는 중입니다.</div>}
       <RouterProvider router={router} />
     </>
