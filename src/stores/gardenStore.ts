@@ -23,7 +23,8 @@ const requiredBedSpecsByZone: Record<number, RequiredBedSpec[]> = {
     { bedNumber: 434, displayCode: "2-43-d" },
     ...Array.from({ length: 6 }, (_, index) => ({ bedNumber: 44 + index }))
   ],
-  3: Array.from({ length: 10 }, (_, index) => ({ bedNumber: index + 1 }))
+  3: Array.from({ length: 10 }, (_, index) => ({ bedNumber: index + 1 })),
+  4: Array.from({ length: 12 }, (_, index) => ({ bedNumber: index + 1 }))
 };
 
 type PlantFormInput = Pick<

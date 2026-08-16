@@ -21,7 +21,7 @@ function createZone(zoneNumber: number): Zone {
     id: `zone_${zoneNumber}`,
     zoneNumber,
     name: `Zone ${zoneNumber}`,
-    description: zoneNumber <= 3 ? "초기 등록 틀밭 구역" : "향후 틀 개수 확정 예정",
+    description: zoneNumber <= 3 ? "초기 등록 틀밭 구역" : "교육용 임시 틀밭 구역",
     isActive: true,
     createdAt: timestamp,
     updatedAt: timestamp
@@ -79,7 +79,8 @@ export function createInitialData(): AppData {
   const beds = [
     ...createBeds(zones[0], 24),
     ...createBedsFromSpecs(zones[1], zone2BedSpecs),
-    ...createBeds(zones[2], 10)
+    ...createBeds(zones[2], 10),
+    ...createBeds(zones[3], 12)
   ];
 
   return {
