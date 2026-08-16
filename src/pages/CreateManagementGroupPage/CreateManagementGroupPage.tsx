@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { todayIsoDate } from "../../utils/id";
 import { getNextGroupNumber } from "../../domain/services/groupRules";
 import { useGardenStore } from "../../stores/gardenStore";
 
@@ -143,7 +142,7 @@ export default function CreateManagementGroupPage() {
   const preselectedBedId = params.get("bedId");
   const [zoneId, setZoneId] = useState("zone_1");
   const [selectedBedIds, setSelectedBedIds] = useState<string[]>([]);
-  const [startDate, setStartDate] = useState(todayIsoDate());
+  const [startDate, setStartDate] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -186,6 +185,10 @@ export default function CreateManagementGroupPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError("");
+    if (!startDate) {
+      setError("관리 시작일을 입력해 주세요.");
+      return;
+    }
     try {
       const sheet = await createGroup(selectedBedIds, startDate);
       navigate(`/sheets/${sheet.id}`);
@@ -212,6 +215,7 @@ export default function CreateManagementGroupPage() {
         <label>
           관리 시작일
           <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+          {!startDate && <small className="field-placeholder-hint">- - -</small>}
         </label>
         <div className="create-map-section">
           <div className="card-title-row">

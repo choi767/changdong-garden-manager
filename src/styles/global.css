@@ -1274,6 +1274,12 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   font-size: 14px;
   font-weight: 900;
 }
+.field-placeholder-hint {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-weight: 900;
+}
 .pending-text {
   color: #9a5b00 !important;
   font-weight: 900;
