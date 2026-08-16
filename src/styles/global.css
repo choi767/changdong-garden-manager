@@ -797,6 +797,12 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   display: grid;
   gap: 12px;
 }
+.create-map-title {
+  color: #b96000;
+  font-size: 20px;
+  line-height: 1.2;
+  word-break: keep-all;
+}
 .create-zone-map {
   width: min(100%, 760px);
   padding-top: 6px;
@@ -1272,12 +1278,6 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 .history-result-plants {
   color: #0f5faa;
   font-size: 14px;
-  font-weight: 900;
-}
-.field-placeholder-hint {
-  display: block;
-  margin-top: 5px;
-  color: var(--muted);
   font-weight: 900;
 }
 .pending-text {

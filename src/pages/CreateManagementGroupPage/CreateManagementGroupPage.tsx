@@ -214,13 +214,24 @@ export default function CreateManagementGroupPage() {
         </label>
         <label>
           관리 시작일
-          <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-          {!startDate && <small className="field-placeholder-hint">- - -</small>}
+          <input
+            type={startDate ? "date" : "text"}
+            value={startDate}
+            placeholder="- - -"
+            onFocus={(event) => {
+              event.currentTarget.type = "date";
+              event.currentTarget.showPicker?.();
+            }}
+            onBlur={(event) => {
+              if (!event.currentTarget.value) event.currentTarget.type = "text";
+            }}
+            onChange={(event) => setStartDate(event.target.value)}
+          />
         </label>
         <div className="create-map-section">
           <div className="card-title-row">
             <div>
-              <h2>지도에서 휴경 틀 선택</h2>
+              <h2 className="create-map-title">지도에서 휴경 틀 선택</h2>
               <small>{selectedBedIds.length}개 틀 선택</small>
             </div>
             <div className="zone-map-legend">
@@ -252,7 +263,7 @@ export default function CreateManagementGroupPage() {
                         top: `${position.top}%`,
                         width: `${position.width}%`,
                         height: `${position.height}%`,
-                        zIndex: zone.zoneNumber === 2 && label === "43" ? 600 : bed.zIndex
+                        zIndex: zone.zoneNumber === 2 && label === "43" ? 6 : bed.zIndex
                       }}
                       title={`${bed.displayCode} ${isSelectable ? "선택 가능" : "경작중"}`}
                       onClick={() => isSelectable && toggleBed(bed.id)}
