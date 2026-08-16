@@ -54,19 +54,19 @@ begin
     returning * into v_row;
 
     if v_row.id is null then
-      select * into v_row
-      from public.garden_snapshots
-      where id = p_id;
+      select gs.* into v_row
+      from public.garden_snapshots as gs
+      where gs.id = p_id;
     end if;
   else
-    update public.garden_snapshots
+    update public.garden_snapshots as gs
     set
       data = p_data,
-      revision = revision + 1,
+      revision = gs.revision + 1,
       updated_at = now(),
       updated_by = auth.uid()
-    where id = p_id
-      and revision = p_expected_revision
+    where gs.id = p_id
+      and gs.revision = p_expected_revision
     returning * into v_row;
 
     if v_row.id is null then
