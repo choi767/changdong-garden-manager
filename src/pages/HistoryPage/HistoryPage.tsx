@@ -78,7 +78,7 @@ export default function HistoryPage() {
       <form className="toolbar filters" onSubmit={onSearch}>
         <input value={year} onChange={(event) => setYear(event.target.value)} placeholder="연도 예: 2026" />
         <input value={month} onChange={(event) => setMonth(event.target.value)} placeholder="월 예: 8" />
-        <input value={zone} onChange={(event) => setZone(event.target.value)} placeholder="Zone" />
+        <input value={zone} onChange={(event) => setZone(event.target.value)} placeholder="Zone 번호" />
         <input value={bedNo} onChange={(event) => setBedNo(event.target.value)} placeholder="틀 번호" />
         <input value={plantQuery} onChange={(event) => setPlantQuery(event.target.value)} placeholder="식물명" />
         <button className="primary-button" type="submit">검색하기</button>
