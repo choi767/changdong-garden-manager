@@ -121,17 +121,31 @@ function PullToRefresh({ onRefresh, disabled }: { onRefresh: () => Promise<void>
 }
 
 function UpdateBanner({ currentAsset, latestAsset }: { currentAsset: string; latestAsset: string }) {
-  function applyUpdate() {
-    const url = new URL(window.location.href);
-    url.searchParams.set("updated", String(Date.now()));
-    window.location.replace(url.toString());
+  const [applying, setApplying] = useState(false);
+
+  async function clearBrowserCaches() {
+    if (!("caches" in window)) return;
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+  }
+
+  async function applyUpdate() {
+    setApplying(true);
+    try {
+      await clearBrowserCaches();
+    } catch {
+      // A cache cleanup failure should not prevent the app from reloading.
+    }
+    window.setTimeout(() => window.location.reload(), 50);
   }
 
   return (
     <div className="update-banner" role="status" aria-live="polite">
-      <span>새 업데이트가 있습니다. 최신 버전으로 다시 불러오세요.</span>
+      <span>{applying ? "업데이트 적용 중입니다..." : "새 업데이트가 있습니다. 최신 버전으로 다시 불러오세요."}</span>
       <small>{currentAsset.split("/").pop()} → {latestAsset.split("/").pop()}</small>
-      <button className="secondary-button compact-action" type="button" onClick={applyUpdate}>업데이트 적용</button>
+      <button className="secondary-button compact-action" type="button" onClick={() => void applyUpdate()} disabled={applying}>
+        {applying ? "적용 중" : "업데이트 적용"}
+      </button>
     </div>
   );
 }

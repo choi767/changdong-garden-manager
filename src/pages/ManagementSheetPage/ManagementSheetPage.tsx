@@ -874,6 +874,7 @@ export default function ManagementSheetPage() {
           <dl className="info-grid">
             <dt>Zone</dt><dd>Zone {group.zoneNumber}</dd>
             <dt>관리 시작일</dt><dd>{sheet.startDate}</dd>
+            <dt>관리 종료일</dt><dd>{sheet.endDate ?? "- -"}</dd>
             <dt>현재 포함 틀</dt><dd>{getBedLabelList(currentBeds)}</dd>
             <dt>과거 포함 틀</dt><dd>{pastBeds.length ? getBedLabelList(pastBeds) : "없음"}</dd>
           </dl>
