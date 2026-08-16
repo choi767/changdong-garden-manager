@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { getBedLabelList, getCurrentBedsForGroup, getPastBedsForGroup, getSheetPlants } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
 
+function normalizeSearchText(value: string): string {
+  return value.trim().replace(/\s+/g, "").toLocaleLowerCase("ko-KR");
+}
+
 export default function HistoryPage() {
   const data = useGardenStore((state) => state.data);
   const [year, setYear] = useState("");
@@ -29,7 +33,10 @@ export default function HistoryPage() {
       .filter((row) => !month || row.sheet.startDate.slice(5, 7) === month.padStart(2, "0"))
       .filter((row) => !zone || row.group?.zoneNumber === Number(zone))
       .filter((row) => !bedNo || row.beds.some((bed) => bed.bedNumber === Number(bedNo)))
-      .filter((row) => !plantQuery || row.plants.some((plant) => plant.includes(plantQuery)));
+      .filter((row) => {
+        const normalizedPlantQuery = normalizeSearchText(plantQuery);
+        return !normalizedPlantQuery || row.plants.some((plant) => normalizeSearchText(plant).includes(normalizedPlantQuery));
+      });
   }, [bedNo, data, month, plantQuery, year, zone]);
 
   const bedHistory = useMemo(() => {
@@ -73,6 +80,7 @@ export default function HistoryPage() {
         <input value={bedNo} onChange={(event) => setBedNo(event.target.value)} placeholder="틀 번호" />
         <input value={plantQuery} onChange={(event) => setPlantQuery(event.target.value)} placeholder="식물명" />
       </section>
+      <p className="hint">입력값 모두 동시에 만족되는 결과만 보여줍니다. 틀번호와 식물명은 관리표에 포함된 항목 중 하나라도 일치하면 검색됩니다.</p>
 
       <section className="card-list">
         {rows.map((row) => (
