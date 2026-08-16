@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
+import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
 import { useGardenStore } from "../../stores/gardenStore";
 
 export default function HarvestOverviewPage() {
@@ -22,6 +23,10 @@ export default function HarvestOverviewPage() {
     const sheetPlant = appData.sheetPlants.find((item) => item.id === sheetPlantId);
     const plant = sheetPlant ? appData.plants.find((item) => item.id === sheetPlant.plantId) : null;
     return plant?.name ?? "삭제된 식물";
+  }
+
+  function photosForRecord(recordId: string) {
+    return appData.photos.filter((photo) => photo.recordType === "HARVEST" && photo.recordId === recordId);
   }
 
   async function onDelete(id: string) {
@@ -54,10 +59,13 @@ export default function HarvestOverviewPage() {
                 const info = sheetInfo(item.managementSheetId);
                 return (
                   <div className="timeline-item" key={item.id}>
-                    <p>
-                      {item.harvestDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)} · {item.quantity}{item.unit} · {item.quality}
-                      {item.notes ? `: ${item.notes}` : ""}
-                    </p>
+                    <div>
+                      <p>
+                        {item.harvestDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)} · {item.quantity}{item.unit} · {item.quality}
+                        {item.notes ? `: ${item.notes}` : ""}
+                      </p>
+                      <RecordPhotoGallery photos={photosForRecord(item.id)} />
+                    </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}>
                       <Trash2 size={16} /> 삭제
                     </button>

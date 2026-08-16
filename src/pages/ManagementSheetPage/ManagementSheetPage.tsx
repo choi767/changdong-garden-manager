@@ -22,7 +22,7 @@ const THUMBNAIL_MAX_SIDE = 360;
 const PHOTO_QUALITY = 0.72;
 const THUMBNAIL_QUALITY = 0.6;
 const PHOTO_ACCEPT = "image/*,.jpg,.jpeg,.png,.webp,.heic,.heif";
-type RecordPhotoKind = "observation" | "pest" | "harvest";
+type RecordPhotoKind = "work" | "observation" | "pest" | "harvest";
 type RecordPhotoType = NonNullable<Photo["recordType"]>;
 
 function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: number): Promise<Blob> {
@@ -240,12 +240,13 @@ export default function ManagementSheetPage() {
   const [photoSaved, setPhotoSaved] = useState(false);
   const [photoInputKey, setPhotoInputKey] = useState(0);
   const photoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const workPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
   const observationPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
   const pestPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
   const harvestPhotoFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [recordPhotoFiles, setRecordPhotoFiles] = useState<Record<RecordPhotoKind, File | null>>({ observation: null, pest: null, harvest: null });
+  const [recordPhotoFiles, setRecordPhotoFiles] = useState<Record<RecordPhotoKind, File | null>>({ work: null, observation: null, pest: null, harvest: null });
   const [recordPhotoSaving, setRecordPhotoSaving] = useState<RecordPhotoKind | "">("");
-  const [recordPhotoInputKeys, setRecordPhotoInputKeys] = useState({ observation: 0, pest: 0, harvest: 0 });
+  const [recordPhotoInputKeys, setRecordPhotoInputKeys] = useState({ work: 0, observation: 0, pest: 0, harvest: 0 });
   const [previewPhoto, setPreviewPhoto] = useState<{ photo: Photo; url: string } | null>(null);
   const [materialDate, setMaterialDate] = useState(todayIsoDate());
   const [materialName, setMaterialName] = useState("");
@@ -573,23 +574,34 @@ export default function ManagementSheetPage() {
     if (!pendingWorkLog) return;
     await run(async () => {
       const today = todayIsoDate();
-      for (const targetDate of pendingWorkLog.workDates) {
-        const isFuturePlan = targetDate > today || pendingWorkLog.isRepeating;
-        if (scope === "zone" && isFuturePlan) {
-          await addZoneScheduleReminder(group.zoneId, targetDate, pendingWorkLog.workType, pendingWorkLog.content);
-        } else if (scope === "zone") {
-          await addZoneWorkLog(group.zoneId, targetDate, pendingWorkLog.workType, pendingWorkLog.content);
-        } else if (isFuturePlan) {
-          await addScheduleReminder({
-            managementSheetId: activeSheet.id,
-            managementSheetPlantId: pendingWorkLog.managementSheetPlantId,
-            dueDate: targetDate,
-            category: pendingWorkLog.workType,
-            content: pendingWorkLog.content
-          });
-        } else {
-          await addWorkLog({ managementSheetId: activeSheet.id, managementSheetPlantId: pendingWorkLog.managementSheetPlantId, workDate: targetDate, workType: pendingWorkLog.workType, content: pendingWorkLog.content, author: "사용자" });
+      if (recordPhotoFiles.work) setRecordPhotoSaving("work");
+      try {
+        const attachedPhoto = recordPhotoFiles.work
+          ? await prepareAttachedPhoto(recordPhotoFiles.work, {
+            photoDate: pendingWorkLog.workDates[0],
+            description: ["작업기록", pendingWorkLog.workType, pendingWorkLog.content.trim()].filter(Boolean).join(": ")
+          })
+          : undefined;
+        for (const targetDate of pendingWorkLog.workDates) {
+          const isFuturePlan = targetDate > today || pendingWorkLog.isRepeating;
+          if (scope === "zone" && isFuturePlan) {
+            await addZoneScheduleReminder(group.zoneId, targetDate, pendingWorkLog.workType, pendingWorkLog.content);
+          } else if (scope === "zone") {
+            await addZoneWorkLog(group.zoneId, targetDate, pendingWorkLog.workType, pendingWorkLog.content, attachedPhoto ? { ...attachedPhoto, photoDate: targetDate } : undefined);
+          } else if (isFuturePlan) {
+            await addScheduleReminder({
+              managementSheetId: activeSheet.id,
+              managementSheetPlantId: pendingWorkLog.managementSheetPlantId,
+              dueDate: targetDate,
+              category: pendingWorkLog.workType,
+              content: pendingWorkLog.content
+            });
+          } else {
+            await addWorkLog({ managementSheetId: activeSheet.id, managementSheetPlantId: pendingWorkLog.managementSheetPlantId, workDate: targetDate, workType: pendingWorkLog.workType, content: pendingWorkLog.content, author: "사용자" }, attachedPhoto ? { ...attachedPhoto, photoDate: targetDate } : undefined);
+          }
         }
+      } finally {
+        setRecordPhotoSaving("");
       }
       setPendingWorkLog(null);
       setWorkPlantId("");
@@ -598,6 +610,7 @@ export default function ManagementSheetPage() {
       setWorkRepeatUnit("NONE");
       setWorkRepeatEvery("0");
       setWorkRepeatEndDate("");
+      clearRecordPhoto("work");
     });
   }
 
@@ -1030,6 +1043,25 @@ export default function ManagementSheetPage() {
               <textarea value={workContent} onChange={(event) => setWorkContent(event.target.value)} placeholder="필요시 구체내용을 기록하세요" />
             </label>
           </div>
+          <div className="record-action-row">
+            <button
+              className={recordPhotoButtonClass("work")}
+              type="button"
+              onClick={() => workPhotoFileInputRef.current?.click()}
+              disabled={recordPhotoSaving === "work" || sheet.status !== "ACTIVE"}
+            >
+              <ImagePlus size={18} /> {recordPhotoLabel("work")}
+            </button>
+            <input
+              key={recordPhotoInputKeys.work}
+              ref={workPhotoFileInputRef}
+              className="visually-hidden-file"
+              type="file"
+              accept={PHOTO_ACCEPT}
+              onChange={(event) => onRecordPhotoFileChange("work", event.target.files?.[0])}
+              disabled={recordPhotoSaving === "work" || sheet.status !== "ACTIVE"}
+            />
+          </div>
           <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE" || (workType === "직접입력" && !customWorkType.trim())}>
             <Calendar size={18} /> 작업/일정 저장
           </button>
@@ -1063,9 +1095,12 @@ export default function ManagementSheetPage() {
               <div className="timeline">
                 {visibleWorkLogs.map((item) => (
                   <div className="timeline-item" key={item.id}>
-                    <p>
-                      {item.workDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
-                    </p>
+                    <div>
+                      <p>
+                        {item.workDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
+                      </p>
+                      <RecordPhotoList photos={photosForRecord("WORK", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
+                    </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDeleteWorkLog(item.id)}>삭제</button>
                   </div>
                 ))}

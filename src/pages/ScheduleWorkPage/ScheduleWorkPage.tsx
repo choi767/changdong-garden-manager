@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, Trash2 } from "lucide-react";
+import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
 import { useGardenStore } from "../../stores/gardenStore";
 import type { ScheduleReminder, WorkLog } from "../../domain/entities/models";
 
@@ -61,6 +62,10 @@ export default function ScheduleWorkPage() {
     const sheetPlant = appData.sheetPlants.find((item) => item.id === sheetPlantId);
     const plant = sheetPlant ? appData.plants.find((item) => item.id === sheetPlant.plantId) : null;
     return plant?.name ?? "삭제된 식물";
+  }
+
+  function photosForWorkRecord(recordId: string) {
+    return appData.photos.filter((photo) => photo.recordType === "WORK" && photo.recordId === recordId);
   }
 
   async function onCompleteSchedule(id: string) {
@@ -144,9 +149,12 @@ export default function ScheduleWorkPage() {
                 <div className="timeline">
                   {zoneWorkLogs.map((item) => (
                     <div className="timeline-item" key={item.id}>
-                      <p>
-                        {item.workDate} · {recordTargetNode(item, appData.workLogs)} · {plantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
-                      </p>
+                      <div>
+                        <p>
+                          {item.workDate} · {recordTargetNode(item, appData.workLogs)} · {plantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
+                        </p>
+                        <RecordPhotoGallery photos={photosForWorkRecord(item.id)} />
+                      </div>
                       <button className="danger-button compact-action" type="button" onClick={() => void onDeleteWork(item.id)}>
                         <Trash2 size={16} /> 삭제
                       </button>

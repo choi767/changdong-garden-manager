@@ -84,9 +84,9 @@ interface GardenState {
   addPlantToSheet: (sheetId: string, plantId: string) => Promise<void>;
   updateSheetPlant: (sheetPlantId: string, input: SheetPlantFormInput) => Promise<void>;
   stopSheetPlant: (sheetPlantId: string) => Promise<void>;
-  addWorkLog: (input: Pick<WorkLog, "managementSheetId" | "managementSheetPlantId" | "workDate" | "workType" | "content" | "author">) => Promise<void>;
+  addWorkLog: (input: Pick<WorkLog, "managementSheetId" | "managementSheetPlantId" | "workDate" | "workType" | "content" | "author">, photo?: AttachedPhotoInput) => Promise<WorkLog>;
   deleteWorkLog: (workLogId: string) => Promise<void>;
-  addZoneWorkLog: (zoneId: string, workDate: string, workType: string, content: string) => Promise<void>;
+  addZoneWorkLog: (zoneId: string, workDate: string, workType: string, content: string, photo?: AttachedPhotoInput) => Promise<WorkLog[]>;
   addHarvestRecord: (input: Pick<HarvestRecord, "managementSheetId" | "managementSheetPlantId" | "harvestDate" | "quantity" | "unit" | "quality" | "notes">, photo?: AttachedPhotoInput) => Promise<HarvestRecord>;
   deleteHarvestRecord: (harvestRecordId: string) => Promise<void>;
   addPhoto: (input: PhotoInput) => Promise<Photo>;
@@ -559,10 +559,15 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     await persist(set, data, "해제했습니다.");
   },
 
-  async addWorkLog(input) {
-    await persistMutation(set, () => get().data, "작업이력을 저장했습니다.", (data) => {
+  async addWorkLog(input, photo) {
+    return persistMutation(set, () => get().data, "작업이력을 저장했습니다.", (data) => {
       const timestamp = nowIso();
-      data.workLogs.push({ ...input, id: makeId("work"), batchId: null, createdAt: timestamp, updatedAt: timestamp });
+      const record = { ...input, id: makeId("work"), batchId: null, createdAt: timestamp, updatedAt: timestamp };
+      data.workLogs.push(record);
+      if (photo) {
+        data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "WORK", record.id));
+      }
+      return record;
     });
   },
 
@@ -570,19 +575,22 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const data = requireData(get().data);
     const workLog = data.workLogs.find((item) => item.id === workLogId);
     if (!workLog) throw new Error("존재하지 않는 작업이력입니다.");
+    const deletedWorkLogIds = new Set(data.workLogs.filter((item) => workLog.batchId ? item.batchId === workLog.batchId : item.id === workLogId).map((item) => item.id));
     data.workLogs = data.workLogs.filter((item) => workLog.batchId ? item.batchId !== workLog.batchId : item.id !== workLogId);
+    data.photos = data.photos.filter((item) => item.recordType !== "WORK" || !item.recordId || !deletedWorkLogIds.has(item.recordId));
     await persist(set, data, "삭제했습니다");
   },
 
-  async addZoneWorkLog(zoneId, workDate, workType, content) {
-    await persistMutation(set, () => get().data, "Zone 전체 작업이력을 저장했습니다.", (data) => {
+  async addZoneWorkLog(zoneId, workDate, workType, content, photo) {
+    return persistMutation(set, () => get().data, "Zone 전체 작업이력을 저장했습니다.", (data) => {
       const activeGroups = data.managementGroups.filter((group) => group.zoneId === zoneId && group.status === "ACTIVE");
       const activeSheets = data.managementSheets.filter((sheet) => activeGroups.some((group) => group.id === sheet.managementGroupId) && sheet.status === "ACTIVE");
       if (activeSheets.length === 0) throw new Error("해당 Zone에 활성 관리표가 없습니다.");
       const timestamp = nowIso();
       const batchId = makeId("batch");
+      const records: WorkLog[] = [];
       for (const sheet of activeSheets) {
-        data.workLogs.push({
+        const record = {
           id: makeId("work"),
           managementSheetId: sheet.id,
           managementSheetPlantId: null,
@@ -593,8 +601,14 @@ export const useGardenStore = create<GardenState>((set, get) => ({
           batchId,
           createdAt: timestamp,
           updatedAt: timestamp
-        });
+        };
+        data.workLogs.push(record);
+        records.push(record);
+        if (photo) {
+          data.photos.push(makeAttachedPhoto(photo, sheet.id, null, "WORK", record.id));
+        }
       }
+      return records;
     });
   },
 

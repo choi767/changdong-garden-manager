@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
+import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
 import { useGardenStore } from "../../stores/gardenStore";
 
 export default function PestOverviewPage() {
@@ -23,6 +24,10 @@ export default function PestOverviewPage() {
     const sheetPlant = appData.sheetPlants.find((item) => item.id === sheetPlantId);
     const plant = sheetPlant ? appData.plants.find((item) => item.id === sheetPlant.plantId) : null;
     return plant?.name ?? "삭제된 식물";
+  }
+
+  function photosForRecord(recordId: string) {
+    return appData.photos.filter((photo) => photo.recordType === "PEST" && photo.recordId === recordId);
   }
 
   async function onDelete(id: string) {
@@ -55,11 +60,14 @@ export default function PestOverviewPage() {
                 const info = sheetInfo(item.managementSheetId);
                 return (
                   <div className="timeline-item" key={item.id}>
-                    <p>
-                      {item.detectedDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)} · {item.pestType}({item.severity})
-                      {item.symptom ? `: ${item.symptom}` : ""}
-                      {item.action ? ` / ${item.action}` : ""}
-                    </p>
+                    <div>
+                      <p>
+                        {item.detectedDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)} · {item.pestType}({item.severity})
+                        {item.symptom ? `: ${item.symptom}` : ""}
+                        {item.action ? ` / ${item.action}` : ""}
+                      </p>
+                      <RecordPhotoGallery photos={photosForRecord(item.id)} />
+                    </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}>
                       <Trash2 size={16} /> 삭제
                     </button>
