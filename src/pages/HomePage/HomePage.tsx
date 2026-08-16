@@ -113,18 +113,18 @@ const zoneMapLayouts: Record<number, Record<string, MapPosition>> = {
     10: { left: 77.7, top: 56, width: 8.5, height: 34 }
   },
   4: {
-    1: { left: 6, top: 8, width: 18, height: 24 },
-    2: { left: 29, top: 8, width: 18, height: 24 },
-    3: { left: 52, top: 8, width: 18, height: 24 },
-    4: { left: 75, top: 8, width: 18, height: 24 },
-    5: { left: 6, top: 38, width: 18, height: 24 },
-    6: { left: 29, top: 38, width: 18, height: 24 },
-    7: { left: 52, top: 38, width: 18, height: 24 },
-    8: { left: 75, top: 38, width: 18, height: 24 },
-    9: { left: 6, top: 68, width: 18, height: 24 },
-    10: { left: 29, top: 68, width: 18, height: 24 },
-    11: { left: 52, top: 68, width: 18, height: 24 },
-    12: { left: 75, top: 68, width: 18, height: 24 }
+    1: { left: 8, top: 8, width: 14, height: 18.7 },
+    2: { left: 32, top: 8, width: 14, height: 18.7 },
+    3: { left: 56, top: 8, width: 14, height: 18.7 },
+    4: { left: 80, top: 8, width: 14, height: 18.7 },
+    5: { left: 8, top: 40.5, width: 14, height: 18.7 },
+    6: { left: 32, top: 40.5, width: 14, height: 18.7 },
+    7: { left: 56, top: 40.5, width: 14, height: 18.7 },
+    8: { left: 80, top: 40.5, width: 14, height: 18.7 },
+    9: { left: 8, top: 73, width: 14, height: 18.7 },
+    10: { left: 32, top: 73, width: 14, height: 18.7 },
+    11: { left: 56, top: 73, width: 14, height: 18.7 },
+    12: { left: 80, top: 73, width: 14, height: 18.7 }
   }
 };
 
@@ -340,6 +340,7 @@ export default function HomePage() {
                         );
                       })}
                     </div>
+                    {zone.zoneNumber === 4 && <p className="zone-training-note">연습용 구역 입니다</p>}
                   </article>
                 );
               })}

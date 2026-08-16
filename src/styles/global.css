@@ -618,6 +618,13 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 .zone-map-canvas-z4 {
   aspect-ratio: 4 / 3;
 }
+.zone-training-note {
+  margin: -2px 12px 10px;
+  color: #a3261d;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+}
 .zone-map-fallback .zone-map-canvas {
   min-height: 500px;
   background:
