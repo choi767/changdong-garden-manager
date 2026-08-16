@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getBedLabelList, getCurrentBedsForGroup, getPastBedsForGroup, getSheetPlants } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
@@ -24,6 +24,25 @@ export default function HistoryPage() {
   const [plantQuery, setPlantQuery] = useState("");
   const [appliedFilters, setAppliedFilters] = useState<HistoryFilters | null>(null);
   const [searchMessage, setSearchMessage] = useState("");
+  const resultsRef = useRef<HTMLElement | null>(null);
+
+  function scrollToResults() {
+    const target = resultsRef.current;
+    if (!target) return;
+    const scrollParent = target.closest<HTMLElement>(".main-panel");
+    if (scrollParent) {
+      const parentRect = scrollParent.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const offset = Math.max(120, Math.round(scrollParent.clientHeight * 0.28));
+      scrollParent.scrollTo({
+        top: scrollParent.scrollTop + targetRect.top - parentRect.top - offset,
+        behavior: "smooth"
+      });
+      return;
+    }
+    const top = target.getBoundingClientRect().top + window.scrollY - Math.max(120, Math.round(window.innerHeight * 0.28));
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  }
 
   const rows = useMemo(() => {
     if (!data || !appliedFilters) return [];
@@ -62,6 +81,7 @@ export default function HistoryPage() {
     }
     setAppliedFilters(nextFilters);
     setSearchMessage("");
+    window.setTimeout(scrollToResults, 0);
   }
 
   if (!data) return null;
@@ -86,7 +106,7 @@ export default function HistoryPage() {
       <p className="hint history-filter-hint">5가지 값중 1가지 이상 입력하세요. 입력한 조건을 모두 만족하는 결과만 보여줍니다. 틀번호와 식물명은 관리표에 포함된 항목 중 하나라도 일치하면 검색됩니다.</p>
       {searchMessage && <p className="form-error">{searchMessage}</p>}
 
-      <section className="card-list">
+      <section className="card-list" ref={resultsRef} aria-live="polite">
         {rows.map((row) => (
           <article className="card" key={row.sheet.id}>
             <div className="card-title-row">
