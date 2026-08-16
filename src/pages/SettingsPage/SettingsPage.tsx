@@ -128,10 +128,6 @@ export default function SettingsPage() {
           <h2>백업 / 복원</h2>
           <div className="button-row">
             <button className="primary-button" type="button" onClick={() => void onExport()}><Download size={18} /> JSON 백업</button>
-            <label className="secondary-button file-button">
-              <Upload size={18} /> JSON 복원
-              <input type="file" accept="application/json" onChange={(event) => void onImport(event)} />
-            </label>
           </div>
           <label className="admin-toggle">
             <input type="checkbox" checked={showAdminTools} onChange={(event) => setShowAdminTools(event.target.checked)} />
@@ -139,6 +135,10 @@ export default function SettingsPage() {
           </label>
           {showAdminTools && (
             <div className="admin-tools">
+              <label className="secondary-button file-button">
+                <Upload size={18} /> JSON 복원
+                <input type="file" accept="application/json" onChange={(event) => void onImport(event)} />
+              </label>
               <button className="danger-button" type="button" onClick={() => void onResetDevelopmentData()}><RefreshCcw size={18} /> 개발용 초기화</button>
               <button className="danger-button" type="button" onClick={() => void onDeleteAllPlants()}><Trash2 size={18} /> 식물DB 전체삭제</button>
             </div>
