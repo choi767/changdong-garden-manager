@@ -434,6 +434,13 @@ h2 { font-size: 19px; }
   min-height: 38px;
   padding: 8px 10px;
 }
+.sheet-plant-add-form {
+  margin-top: 18px;
+}
+.sheet-plant-add-hint {
+  color: #9a1f16;
+  font-weight: 900;
+}
 .form-stack { display: grid; gap: 14px; }
 label { display: grid; gap: 6px; color: var(--muted); font-weight: 700; font-size: 13px; }
 input, select, textarea {

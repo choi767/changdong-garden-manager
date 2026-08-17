@@ -327,13 +327,6 @@ export default function ManagementSheetPage() {
   const addableBeds = data.beds.filter((bed) => bed.zoneId === group.zoneId && bed.status === "FALLOW" && bed.isActive);
   const activePlants = data.plants.filter((plant) => !sheetPlants.some((item) => item.plantId === plant.id)).sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
   const plantAddDisabled = sheetPlants.length >= MAX_SHEET_PLANTS || sheet.status !== "ACTIVE";
-  const plantAddMessage = data.plants.length === 0
-    ? "식물DB에 등록된 식물이 없습니다. 식물DB에서 먼저 식물을 등록해 주세요."
-    : sheetPlants.length >= MAX_SHEET_PLANTS
-      ? `관리표 하나에는 식물을 최대 ${MAX_SHEET_PLANTS}종까지 등록할 수 있습니다.`
-      : activePlants.length === 0
-        ? "식물DB의 모든 식물이 현재 관리표에 이미 등록되어 있습니다."
-        : `식물DB ${data.plants.length}개 중 ${activePlants.length}개를 추가할 수 있습니다.`;
   const workLogs = data.workLogs.filter((log) => log.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const harvestRecords = data.harvestRecords.filter((record) => record.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const visibleHarvestRecords = showAllHarvestRecords ? harvestRecords : harvestRecords.slice(0, 5);
@@ -1071,14 +1064,14 @@ export default function ManagementSheetPage() {
               );
             })}
           </div>
-          <form className="inline-form" onSubmit={onAddPlant}>
+          <form className="inline-form sheet-plant-add-form" onSubmit={onAddPlant}>
             <select value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || activePlants.length === 0 || cultivationBlocksOtherActions}>
               <option value="">식물 선택</option>
               {activePlants.map((plant) => <option key={plant.id} value={plant.id}>{plant.name}</option>)}
             </select>
             <button className="primary-button" type="submit" disabled={!plantId || plantAddDisabled || cultivationBlocksOtherActions}><Sprout size={18} /> 추가</button>
           </form>
-          <p className="hint">{plantAddMessage}</p>
+          <p className="hint sheet-plant-add-hint">식물DB에서 관리그룹당 최대 5개까지 추가할수 있습니다. 원하는 식물이 없으면 하단의 DB메뉴에서 식물을 추가하시고 다시 하십시오</p>
         </article>
       </section>
 
