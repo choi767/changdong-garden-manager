@@ -1297,6 +1297,11 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   color: #9a1f16;
   font-weight: 900;
 }
+.history-storage-summary {
+  margin-top: -12px;
+  font-size: 13px;
+  font-weight: 800;
+}
 .history-result-title {
   display: flex;
   align-items: baseline;

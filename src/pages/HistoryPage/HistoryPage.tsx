@@ -65,6 +65,23 @@ export default function HistoryPage() {
       .filter((row) => !normalizedPlantQuery || row.plants.some((plant) => normalizeSearchText(plant).includes(normalizedPlantQuery)));
   }, [appliedFilters, data]);
 
+  const closedHistorySummary = useMemo(() => {
+    if (!data) return "0개";
+    const countsByYear = data.managementSheets
+      .filter((sheet) => sheet.status === "CLOSED")
+      .reduce<Record<string, number>>((counts, sheet) => {
+        const year = sheet.startDate.slice(0, 4);
+        if (!/^\d{4}$/.test(year)) return counts;
+        counts[year] = (counts[year] ?? 0) + 1;
+        return counts;
+      }, {});
+    const summary = Object.entries(countsByYear)
+      .sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
+      .map(([summaryYear, count]) => `${summaryYear}년 ${count}개`)
+      .join(", ");
+    return summary || "0개";
+  }, [data]);
+
   function onSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextFilters = {
@@ -104,6 +121,7 @@ export default function HistoryPage() {
         <button className="primary-button" type="submit">검색하기</button>
       </form>
       <p className="hint history-filter-hint">5가지 값중 1가지 이상 입력하세요. 입력한 조건을 모두 만족하는 결과만 보여줍니다. 틀번호와 식물명은 관리표에 포함된 항목 중 하나라도 일치하면 검색됩니다.</p>
+      <p className="hint history-storage-summary">현재 보관중인 관리이력 : {closedHistorySummary} (관리시작일기준)</p>
       {searchMessage && <p className="form-error">{searchMessage}</p>}
 
       <section className="card-list" ref={resultsRef} aria-live="polite">
