@@ -940,14 +940,6 @@ export default function ManagementSheetPage() {
       </header>
       <div className="sheet-scroll-area" ref={sheetScrollAreaRef}>
         {isSaving && <div className="saving-popup" role="status" aria-live="assertive">저장 중입니다... 잠시 기다려 주세요</div>}
-        {pendingCultivation && (
-          <div
-            className="cultivation-screen-lock"
-            role="presentation"
-            onWheel={(event) => event.preventDefault()}
-            onTouchMove={(event) => event.preventDefault()}
-          />
-        )}
         {cultivationBlockMessage && <div className="cultivation-lock-popup" role="alert">{cultivationBlockMessage}</div>}
         {error && <p className="form-error">{error}</p>}
 

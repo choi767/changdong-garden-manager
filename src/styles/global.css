@@ -920,13 +920,6 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   display: grid;
   gap: 10px;
 }
-.cultivation-screen-lock {
-  position: fixed;
-  inset: 0;
-  z-index: 94;
-  background: rgba(11, 28, 18, .42);
-  touch-action: none;
-}
 .cultivation-card-locked {
   position: relative;
   z-index: 97;
