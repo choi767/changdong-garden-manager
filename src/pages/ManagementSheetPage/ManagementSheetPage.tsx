@@ -269,14 +269,47 @@ export default function ManagementSheetPage() {
   const [dirtyCultivationIds, setDirtyCultivationIds] = useState<string[]>([]);
   const [cultivationRequiredMessageId, setCultivationRequiredMessageId] = useState("");
   const [cultivationBlockMessage, setCultivationBlockMessage] = useState("");
+  const sheetScrollAreaRef = useRef<HTMLDivElement | null>(null);
   const cultivationSaveRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const lastFocusedCultivationIdRef = useRef("");
+  const pendingCultivationIdForScroll = (() => {
+    if (!data || !sheetId) return "";
+    const sheetForScroll = data.managementSheets.find((item) => item.id === sheetId);
+    if (!sheetForScroll || sheetForScroll.status !== "ACTIVE") return "";
+    return getSheetPlants(data, sheetForScroll.id)
+      .find((item) => needsCultivationSave(item) || dirtyCultivationIds.includes(item.id))?.id ?? "";
+  })();
 
   useEffect(() => {
     if (!photoSaved) return;
     const timer = window.setTimeout(() => setPhotoSaved(false), 2500);
     return () => window.clearTimeout(timer);
   }, [photoSaved]);
+
+  useEffect(() => {
+    if (!pendingCultivationIdForScroll) return;
+    const scrollArea = sheetScrollAreaRef.current;
+    const target = cultivationSaveRefs.current[pendingCultivationIdForScroll];
+    if (!scrollArea || !target) return;
+    const targetElement = target;
+
+    function keepSaveButtonReachable() {
+      const currentScrollArea = sheetScrollAreaRef.current;
+      if (!currentScrollArea) return;
+      const areaRect = currentScrollArea.getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
+      const topLimit = areaRect.top + areaRect.height * 0.5;
+      if (targetRect.top >= topLimit) return;
+      currentScrollArea.scrollTop += targetRect.top - topLimit;
+    }
+
+    keepSaveButtonReachable();
+    scrollArea.addEventListener("scroll", keepSaveButtonReachable, { passive: true });
+    window.addEventListener("resize", keepSaveButtonReachable);
+    return () => {
+      scrollArea.removeEventListener("scroll", keepSaveButtonReachable);
+      window.removeEventListener("resize", keepSaveButtonReachable);
+    };
+  }, [pendingCultivationIdForScroll]);
 
   if (!data) return null;
   const sheet = data.managementSheets.find((item) => item.id === sheetId);
@@ -376,15 +409,12 @@ export default function ManagementSheetPage() {
   function focusCultivationSave(sheetPlantId: string) {
     const target = cultivationSaveRefs.current[sheetPlantId];
     if (!target) return;
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.scrollIntoView({ behavior: "smooth", block: "nearest" });
     window.setTimeout(() => target.focus({ preventScroll: true }), 120);
   }
 
   function registerCultivationSaveButton(sheetPlantId: string, element: HTMLButtonElement | null) {
     cultivationSaveRefs.current[sheetPlantId] = element;
-    if (!element || pendingCultivation?.id !== sheetPlantId || lastFocusedCultivationIdRef.current === sheetPlantId) return;
-    lastFocusedCultivationIdRef.current = sheetPlantId;
-    window.setTimeout(() => focusCultivationSave(sheetPlantId), 80);
   }
 
   function requireCultivationSaved(): boolean {
@@ -908,7 +938,7 @@ export default function ManagementSheetPage() {
           </div>
         </div>
       </header>
-      <div className="sheet-scroll-area">
+      <div className="sheet-scroll-area" ref={sheetScrollAreaRef}>
         {isSaving && <div className="saving-popup" role="status" aria-live="assertive">저장 중입니다... 잠시 기다려 주세요</div>}
         {pendingCultivation && (
           <div
