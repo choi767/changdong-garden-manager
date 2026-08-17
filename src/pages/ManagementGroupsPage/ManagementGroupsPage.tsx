@@ -30,14 +30,13 @@ export default function ManagementGroupsPage() {
       <header className="page-header">
         <div>
           <p className="eyebrow">전체 현황</p>
-          <h1>관리그룹</h1>
+          <h1>활성관리그룹</h1>
         </div>
         <span className="status-pill">{activeGroups.length}개 관리중</span>
       </header>
 
       <section className="panel">
         <div className="card-title-row">
-          <h2>활성 관리그룹</h2>
           <small>현재 관리중인 그룹만 표시합니다.</small>
         </div>
         <div className="home-group-list">
