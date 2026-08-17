@@ -910,6 +910,14 @@ export default function ManagementSheetPage() {
       </header>
       <div className="sheet-scroll-area">
         {isSaving && <div className="saving-popup" role="status" aria-live="assertive">저장 중입니다... 잠시 기다려 주세요</div>}
+        {pendingCultivation && (
+          <div
+            className="cultivation-screen-lock"
+            role="presentation"
+            onWheel={(event) => event.preventDefault()}
+            onTouchMove={(event) => event.preventDefault()}
+          />
+        )}
         {cultivationBlockMessage && <div className="cultivation-lock-popup" role="alert">{cultivationBlockMessage}</div>}
         {error && <p className="form-error">{error}</p>}
 
@@ -956,7 +964,7 @@ export default function ManagementSheetPage() {
             {sheetPlants.map((item) => {
               const cultivationNeedsSave = needsCultivationSave(item) || dirtyCultivationIds.includes(item.id);
               return (
-              <div className="plant-card" key={item.id}>
+              <div className={`plant-card ${pendingCultivation?.id === item.id ? "cultivation-card-locked" : ""}`} key={item.id}>
                 <div className="card-title-row">
                   <div>
                     <strong>{item.plant ? `${item.plant.name}/${plantCategoryLabel[item.plant.category ?? "CROP"]}` : "삭제된 식물"}</strong>

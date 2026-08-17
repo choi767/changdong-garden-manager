@@ -920,6 +920,24 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   display: grid;
   gap: 10px;
 }
+.cultivation-screen-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 94;
+  background: rgba(11, 28, 18, .42);
+  touch-action: none;
+}
+.cultivation-card-locked {
+  position: relative;
+  z-index: 97;
+  border-color: #e0b422;
+  background: #fffef5;
+  box-shadow: 0 18px 48px rgba(45, 30, 0, .28);
+}
+.cultivation-card-locked .cultivation-info {
+  border-color: #e0b422;
+  background: #fff9d7;
+}
 .plant-db-info {
   display: grid;
   grid-template-columns: 110px 1fr;
