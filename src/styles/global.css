@@ -1401,7 +1401,7 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   position: fixed;
   left: 50%;
   top: max(82px, calc(env(safe-area-inset-top) + 70px));
-  z-index: 96;
+  z-index: 120;
   width: min(92vw, 420px);
   transform: translateX(-50%);
   padding: 16px 18px;
@@ -1415,6 +1415,7 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   box-shadow: 0 16px 38px rgba(72, 48, 0, .24);
 }
 .cultivation-lock-popup {
+  z-index: 119;
   top: max(128px, calc(env(safe-area-inset-top) + 116px));
   border-color: #e3aaa4;
   background: #fff0ee;
