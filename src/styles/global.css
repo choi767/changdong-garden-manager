@@ -437,8 +437,20 @@ h2 { font-size: 19px; }
 .sheet-plant-add-form {
   margin-top: 18px;
 }
+.sheet-plant-select {
+  border: 2px solid #1f4f35;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+}
+.sheet-plant-select:disabled {
+  border-color: #42634e;
+  background: #f8faf7;
+  color: #173c2a;
+  opacity: 1;
+}
 .sheet-plant-add-hint {
-  color: #9a1f16;
+  color: #b42318;
   font-weight: 900;
 }
 .form-stack { display: grid; gap: 14px; }

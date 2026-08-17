@@ -1065,13 +1065,14 @@ export default function ManagementSheetPage() {
             })}
           </div>
           <form className="inline-form sheet-plant-add-form" onSubmit={onAddPlant}>
-            <select value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || activePlants.length === 0 || cultivationBlocksOtherActions}>
+            <select className="sheet-plant-select" value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || activePlants.length === 0 || cultivationBlocksOtherActions}>
               <option value="">식물 선택</option>
               {activePlants.map((plant) => <option key={plant.id} value={plant.id}>{plant.name}</option>)}
             </select>
             <button className="primary-button" type="submit" disabled={!plantId || plantAddDisabled || cultivationBlocksOtherActions}><Sprout size={18} /> 추가</button>
+            <button className="secondary-button" type="button" onClick={() => setPlantId("")} disabled={!plantId}>취소</button>
           </form>
-          <p className="hint sheet-plant-add-hint">식물DB에서 관리그룹당 최대 5개까지 추가할수 있습니다. 원하는 식물이 없으면 하단의 DB메뉴에서 식물을 추가하시고 다시 하십시오</p>
+          <p className="hint sheet-plant-add-hint">식물DB에서 관리그룹당 최대 5개까지 추가할수 있습니다. 원하는 식물이 없으면 하단의 DB메뉴에서 식물을 추가하고 다시 하십시오</p>
         </article>
       </section>
 
