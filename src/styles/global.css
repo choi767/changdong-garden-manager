@@ -1298,7 +1298,7 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   font-weight: 900;
 }
 .history-storage-summary {
-  margin-top: -12px;
+  margin: 4px 0 0;
   font-size: 13px;
   font-weight: 800;
 }

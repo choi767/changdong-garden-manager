@@ -109,6 +109,7 @@ export default function HistoryPage() {
         <div>
           <p className="eyebrow">과거 관리표</p>
           <h1>종료된 관리이력검색</h1>
+          <p className="hint history-storage-summary">현재 보관중인 관리이력 : {closedHistorySummary} (관리시작일기준)</p>
         </div>
       </header>
 
@@ -121,7 +122,6 @@ export default function HistoryPage() {
         <button className="primary-button" type="submit">검색하기</button>
       </form>
       <p className="hint history-filter-hint">5가지 값중 1가지 이상 입력하세요. 입력한 조건을 모두 만족하는 결과만 보여줍니다. 틀번호와 식물명은 관리표에 포함된 항목 중 하나라도 일치하면 검색됩니다.</p>
-      <p className="hint history-storage-summary">현재 보관중인 관리이력 : {closedHistorySummary} (관리시작일기준)</p>
       {searchMessage && <p className="form-error">{searchMessage}</p>}
 
       <section className="card-list" ref={resultsRef} aria-live="polite">
