@@ -449,10 +449,6 @@ h2 { font-size: 19px; }
   color: #173c2a;
   opacity: 1;
 }
-.sheet-plant-add-hint {
-  color: #b42318;
-  font-weight: 900;
-}
 .form-stack { display: grid; gap: 14px; }
 label { display: grid; gap: 6px; color: var(--muted); font-weight: 700; font-size: 13px; }
 input, select, textarea {
@@ -1311,6 +1307,10 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   gap: 8px;
 }
 .empty-text, .hint { color: var(--muted); }
+.hint.sheet-plant-add-hint {
+  color: #b42318;
+  font-weight: 900;
+}
 .history-filter-hint {
   margin-top: -8px;
   color: #9a1f16;
