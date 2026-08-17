@@ -1302,6 +1302,15 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   color: #9a5b00 !important;
   font-weight: 900;
 }
+.cultivation-required-hint {
+  margin: 10px 0 12px;
+  padding: 12px;
+  border: 1px solid #e0b422;
+  border-radius: 8px;
+  background: #fff4b8;
+  color: #5c4100;
+  font-weight: 900;
+}
 .form-error {
   margin: 0;
   padding: 12px;
@@ -1368,6 +1377,34 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   text-align: center;
   background: var(--primary);
   color: white;
+}
+.saving-popup,
+.cultivation-lock-popup {
+  position: fixed;
+  left: 50%;
+  top: max(82px, calc(env(safe-area-inset-top) + 70px));
+  z-index: 96;
+  width: min(92vw, 420px);
+  transform: translateX(-50%);
+  padding: 16px 18px;
+  border: 2px solid #d99b18;
+  border-radius: 8px;
+  background: #fff2a8;
+  color: #4b3200;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+  box-shadow: 0 16px 38px rgba(72, 48, 0, .24);
+}
+.cultivation-lock-popup {
+  top: max(128px, calc(env(safe-area-inset-top) + 116px));
+  border-color: #e3aaa4;
+  background: #fff0ee;
+  color: #8a2118;
+  font-size: 16px;
+}
+.cultivation-save-focus {
+  scroll-margin-block: 42vh;
 }
 .pull-refresh {
   position: fixed;

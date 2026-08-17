@@ -268,6 +268,9 @@ export default function ManagementSheetPage() {
   const [deleteScheduleTarget, setDeleteScheduleTarget] = useState<ScheduleReminder | null>(null);
   const [dirtyCultivationIds, setDirtyCultivationIds] = useState<string[]>([]);
   const [cultivationRequiredMessageId, setCultivationRequiredMessageId] = useState("");
+  const [cultivationBlockMessage, setCultivationBlockMessage] = useState("");
+  const cultivationSaveRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const lastFocusedCultivationIdRef = useRef("");
 
   useEffect(() => {
     if (!photoSaved) return;
@@ -313,6 +316,10 @@ export default function ManagementSheetPage() {
   const materialUsages = (data.materialUsages ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
   const evaluation = (data.sheetEvaluations ?? []).find((item) => item.managementSheetId === sheet.id);
   const membershipEvents = data.memberships.filter((item) => item.managementGroupId === group.id);
+  const pendingCultivation = sheet.status === "ACTIVE"
+    ? sheetPlants.find((item) => needsCultivationSave(item) || dirtyCultivationIds.includes(item.id)) ?? null
+    : null;
+  const cultivationBlocksOtherActions = Boolean(pendingCultivation);
 
   function toggle(list: string[], setList: (ids: string[]) => void, id: string) {
     setList(list.includes(id) ? list.filter((item) => item !== id) : [...list, id]);
@@ -366,6 +373,28 @@ export default function ManagementSheetPage() {
     return value || defaultLinkedPlantId;
   }
 
+  function focusCultivationSave(sheetPlantId: string) {
+    const target = cultivationSaveRefs.current[sheetPlantId];
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => target.focus({ preventScroll: true }), 120);
+  }
+
+  function registerCultivationSaveButton(sheetPlantId: string, element: HTMLButtonElement | null) {
+    cultivationSaveRefs.current[sheetPlantId] = element;
+    if (!element || pendingCultivation?.id !== sheetPlantId || lastFocusedCultivationIdRef.current === sheetPlantId) return;
+    lastFocusedCultivationIdRef.current = sheetPlantId;
+    window.setTimeout(() => focusCultivationSave(sheetPlantId), 80);
+  }
+
+  function requireCultivationSaved(): boolean {
+    if (!pendingCultivation) return true;
+    const plantName = pendingCultivation.plant?.name ?? "새 식물";
+    setCultivationBlockMessage(`${plantName} 재배정보를 먼저 저장해 주세요.`);
+    focusCultivationSave(pendingCultivation.id);
+    return false;
+  }
+
   async function onUpdateSheetPlant(event: FormEvent<HTMLFormElement>, sheetPlantId: string) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -386,6 +415,7 @@ export default function ManagementSheetPage() {
     }));
     setDirtyCultivationIds((ids) => ids.filter((id) => id !== sheetPlantId));
     setCultivationRequiredMessageId("");
+    setCultivationBlockMessage("");
   }
 
   async function onAddBeds(event: FormEvent) {
@@ -409,6 +439,7 @@ export default function ManagementSheetPage() {
 
   async function onAddPlant(event: FormEvent) {
     event.preventDefault();
+    if (!requireCultivationSaved()) return;
     await run(async () => {
       await addPlantToSheet(activeSheet.id, plantId);
       setPlantId("");
@@ -436,6 +467,7 @@ export default function ManagementSheetPage() {
 
   async function onAddSchedule(event: FormEvent) {
     event.preventDefault();
+    if (!requireCultivationSaved()) return;
     setPendingSchedule({
       dueDate: scheduleDate,
       category: scheduleCategory,
@@ -446,6 +478,7 @@ export default function ManagementSheetPage() {
 
   async function savePendingSchedule(scope: "zone" | "current") {
     if (!pendingSchedule) return;
+    if (!requireCultivationSaved()) return;
     await run(async () => {
       if (scope === "zone") {
         await addZoneScheduleReminder(group.zoneId, pendingSchedule.dueDate, pendingSchedule.category, pendingSchedule.content);
@@ -484,6 +517,7 @@ export default function ManagementSheetPage() {
 
   async function onAddObservation(event: FormEvent) {
     event.preventDefault();
+    if (!requireCultivationSaved()) return;
     const resolvedContent = observationContent.trim() || (recordPhotoFiles.observation ? "사진 관찰기록" : "");
     if (!resolvedContent) {
       setError("관찰 내용을 입력해 주세요.");
@@ -527,6 +561,7 @@ export default function ManagementSheetPage() {
 
   async function onAddPestRecord(event: FormEvent) {
     event.preventDefault();
+    if (!requireCultivationSaved()) return;
     const resolvedPestType = pestType.trim() || (recordPhotoFiles.pest ? "사진기록" : "");
     const resolvedPestSymptom = pestSymptom.trim() || (recordPhotoFiles.pest ? "사진으로 기록" : "");
     if (!resolvedPestType && !resolvedPestSymptom) {
@@ -577,6 +612,7 @@ export default function ManagementSheetPage() {
 
   async function onAddWork(event: FormEvent) {
     event.preventDefault();
+    if (!requireCultivationSaved()) return;
     const resolvedWorkType = workType === "직접입력" ? customWorkType.trim() : workType;
     if (!resolvedWorkType) {
       setError("직접입력 작업 종류를 입력해 주세요.");
@@ -593,6 +629,7 @@ export default function ManagementSheetPage() {
 
   async function savePendingWorkLog(scope: "zone" | "current") {
     if (!pendingWorkLog) return;
+    if (!requireCultivationSaved()) return;
     await run(async () => {
       const today = todayIsoDate();
       if (recordPhotoFiles.work) setRecordPhotoSaving("work");
@@ -657,6 +694,7 @@ export default function ManagementSheetPage() {
 
   async function onAddHarvest(event: FormEvent) {
     event.preventDefault();
+    if (!requireCultivationSaved()) return;
     const quantity = Number(harvestQty);
     if (!harvestPlantId) {
       setError("수확한 식물을 선택해 주세요.");
@@ -738,6 +776,10 @@ export default function ManagementSheetPage() {
   }
 
   async function onPhotoFileChange(file: File | undefined) {
+    if (!requireCultivationSaved()) {
+      setPhotoInputKey((prev) => prev + 1);
+      return;
+    }
     setPhotoSaving(true);
     setPhotoSaved(false);
     try {
@@ -800,6 +842,7 @@ export default function ManagementSheetPage() {
 
   async function onAddMaterialUsage(event: FormEvent) {
     event.preventDefault();
+    if (!requireCultivationSaved()) return;
     const quantity = Number(materialQty);
     const cost = Number(materialCost);
     if (!materialName.trim()) {
@@ -839,6 +882,7 @@ export default function ManagementSheetPage() {
 
   async function onSaveEvaluation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!requireCultivationSaved()) return;
     const formData = new FormData(event.currentTarget);
     await run(() => upsertSheetEvaluation({
       managementSheetId: activeSheet.id,
@@ -865,7 +909,8 @@ export default function ManagementSheetPage() {
         </div>
       </header>
       <div className="sheet-scroll-area">
-        {isSaving && <div className="loading-bar saving-bar">저장 중입니다...</div>}
+        {isSaving && <div className="saving-popup" role="status" aria-live="assertive">저장 중입니다... 잠시 기다려 주세요</div>}
+        {cultivationBlockMessage && <div className="cultivation-lock-popup" role="alert">{cultivationBlockMessage}</div>}
         {error && <p className="form-error">{error}</p>}
 
       <section className="dashboard-grid">
@@ -902,6 +947,11 @@ export default function ManagementSheetPage() {
       <section className="dashboard-grid">
         <article className="panel">
           <h2>식물 목록 (현재 {sheetPlants.length}종 재배중)</h2>
+          {pendingCultivation && (
+            <p className="cultivation-required-hint">
+              {pendingCultivation.plant?.name ?? "새 식물"} 재배정보를 저장해야 다른 기록을 입력할 수 있습니다.
+            </p>
+          )}
           <div className="card-list compact">
             {sheetPlants.map((item) => {
               const cultivationNeedsSave = needsCultivationSave(item) || dirtyCultivationIds.includes(item.id);
@@ -978,7 +1028,12 @@ export default function ManagementSheetPage() {
                     <textarea name="notes" defaultValue={item.notes} />
                   </label>
                   {cultivationRequiredMessageId === item.id && <p className="form-error span-2">필수항목 입력하세요</p>}
-                  <button className={`primary-button span-2 ${cultivationNeedsSave ? "attention-button" : "saved-button"}`} type="submit" disabled={!cultivationNeedsSave}>
+                  <button
+                    ref={(element) => registerCultivationSaveButton(item.id, element)}
+                    className={`primary-button span-2 ${cultivationNeedsSave ? "attention-button cultivation-save-focus" : "saved-button"}`}
+                    type="submit"
+                    disabled={!cultivationNeedsSave}
+                  >
                     {cultivationNeedsSave ? "재배 정보 저장" : "재배 정보 저장됨"}
                   </button>
                 </form>
@@ -987,11 +1042,11 @@ export default function ManagementSheetPage() {
             })}
           </div>
           <form className="inline-form" onSubmit={onAddPlant}>
-            <select value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || activePlants.length === 0}>
+            <select value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || activePlants.length === 0 || cultivationBlocksOtherActions}>
               <option value="">식물 선택</option>
               {activePlants.map((plant) => <option key={plant.id} value={plant.id}>{plant.name}</option>)}
             </select>
-            <button className="primary-button" type="submit" disabled={!plantId || plantAddDisabled}><Sprout size={18} /> 추가</button>
+            <button className="primary-button" type="submit" disabled={!plantId || plantAddDisabled || cultivationBlocksOtherActions}><Sprout size={18} /> 추가</button>
           </form>
           <p className="hint">{plantAddMessage}</p>
         </article>
@@ -1070,7 +1125,7 @@ export default function ManagementSheetPage() {
               className={recordPhotoButtonClass("work")}
               type="button"
               onClick={() => workPhotoFileInputRef.current?.click()}
-              disabled={recordPhotoSaving === "work" || sheet.status !== "ACTIVE"}
+              disabled={recordPhotoSaving === "work" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             >
               <ImagePlus size={18} /> {recordPhotoLabel("work")}
             </button>
@@ -1081,10 +1136,10 @@ export default function ManagementSheetPage() {
               type="file"
               accept={PHOTO_ACCEPT}
               onChange={(event) => onRecordPhotoFileChange("work", event.target.files?.[0])}
-              disabled={recordPhotoSaving === "work" || sheet.status !== "ACTIVE"}
+              disabled={recordPhotoSaving === "work" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             />
           </div>
-          <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE" || (workType === "직접입력" && !customWorkType.trim())}>
+          <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE" || cultivationBlocksOtherActions || (workType === "직접입력" && !customWorkType.trim())}>
             <Calendar size={18} /> 작업/일정 저장
           </button>
           <div className="dashboard-grid task-history-grid">
@@ -1161,7 +1216,7 @@ export default function ManagementSheetPage() {
               className={recordPhotoButtonClass("observation")}
               type="button"
               onClick={() => observationPhotoFileInputRef.current?.click()}
-              disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE"}
+              disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             >
               <ImagePlus size={18} /> {recordPhotoLabel("observation")}
             </button>
@@ -1172,9 +1227,9 @@ export default function ManagementSheetPage() {
               type="file"
               accept={PHOTO_ACCEPT}
               onChange={(event) => onRecordPhotoFileChange("observation", event.target.files?.[0])}
-              disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE"}
+              disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             />
-            <button className="primary-button" type="submit" disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE"}>관찰기록 저장</button>
+            <button className="primary-button" type="submit" disabled={recordPhotoSaving === "observation" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}>관찰기록 저장</button>
           </div>
           <div className="timeline">
             {observationMemos.map((item) => (
@@ -1230,7 +1285,7 @@ export default function ManagementSheetPage() {
               className={recordPhotoButtonClass("pest")}
               type="button"
               onClick={() => pestPhotoFileInputRef.current?.click()}
-              disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE"}
+              disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             >
               <ImagePlus size={18} /> {recordPhotoLabel("pest")}
             </button>
@@ -1241,9 +1296,9 @@ export default function ManagementSheetPage() {
               type="file"
               accept={PHOTO_ACCEPT}
               onChange={(event) => onRecordPhotoFileChange("pest", event.target.files?.[0])}
-              disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE"}
+              disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             />
-            <button className="primary-button" type="submit" disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE"}>병해충기록 저장</button>
+            <button className="primary-button" type="submit" disabled={recordPhotoSaving === "pest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}>병해충기록 저장</button>
           </div>
           <div className="timeline">
             {pestRecords.map((item) => (
@@ -1424,7 +1479,7 @@ export default function ManagementSheetPage() {
               className={recordPhotoButtonClass("harvest")}
               type="button"
               onClick={() => harvestPhotoFileInputRef.current?.click()}
-              disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE"}
+              disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             >
               <ImagePlus size={18} /> {recordPhotoLabel("harvest")}
             </button>
@@ -1435,9 +1490,9 @@ export default function ManagementSheetPage() {
               type="file"
               accept={PHOTO_ACCEPT}
               onChange={(event) => onRecordPhotoFileChange("harvest", event.target.files?.[0])}
-              disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE"}
+              disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             />
-            <button className="primary-button" type="submit" disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE"}>수확 저장</button>
+            <button className="primary-button" type="submit" disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}>수확 저장</button>
           </div>
           <div className="timeline">
             {visibleHarvestRecords.map((record) => {
@@ -1486,7 +1541,7 @@ export default function ManagementSheetPage() {
             className={`secondary-button photo-file-button ${photoSaved ? "upload-done" : ""}`}
             type="button"
             onClick={() => photoFileInputRef.current?.click()}
-            disabled={photoSaving || sheet.status !== "ACTIVE"}
+            disabled={photoSaving || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
           >
             <ImagePlus size={18} /> {photoSaving ? "압축 저장 중..." : photoSaved ? "저장했습니다" : "파일/갤러리/구글포토 선택"}
           </button>
@@ -1498,7 +1553,7 @@ export default function ManagementSheetPage() {
             type="file"
             accept={PHOTO_ACCEPT}
             onChange={(event) => void onPhotoFileChange(event.target.files?.[0])}
-            disabled={photoSaving || sheet.status !== "ACTIVE"}
+            disabled={photoSaving || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
           />
         </div>
         <p className="hint">PC에서는 파일을, 휴대폰에서는 갤러리 또는 구글포토를 선택하세요. 휴대폰 파일 선택 화면에 갤러리가 바로 안 보이면 오른쪽 위 ... 메뉴에서 찾아보기를 누르세요. 업로드한 사진은 저장 전에 긴 변 {PHOTO_MAX_SIDE}px 이하로 줄이고 JPEG로 압축합니다.</p>
@@ -1568,7 +1623,7 @@ export default function ManagementSheetPage() {
               <textarea className="compact-textarea" value={materialMemo} onChange={(event) => setMaterialMemo(event.target.value)} placeholder="구입처, 사용 이유 등을 기록하세요" />
             </label>
           </div>
-          <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE"}>비용/자재 저장</button>
+          <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}>비용/자재 저장</button>
           <div className="timeline">
             {materialUsages.map((item) => (
               <div className="timeline-item" key={item.id}>
@@ -1605,7 +1660,7 @@ export default function ManagementSheetPage() {
               <textarea name="improvement" defaultValue={evaluation?.improvement ?? ""} placeholder="다음 재배 때 바꿀 점을 기록하세요" />
             </label>
           </div>
-          <button className="primary-button wide" type="submit">요약/평가 저장</button>
+          <button className="primary-button wide" type="submit" disabled={cultivationBlocksOtherActions}>요약/평가 저장</button>
           {evaluation && <p className="hint">마지막 저장: {evaluation.updatedAt.slice(0, 10)}</p>}
         </form>
       </section>
