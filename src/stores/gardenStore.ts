@@ -83,6 +83,7 @@ interface GardenState {
   updatePlant: (plantId: string, input: PlantFormInput) => Promise<void>;
   deletePlant: (plantId: string) => Promise<void>;
   addPlantToSheet: (sheetId: string, plantId: string) => Promise<void>;
+  addPlantToSheetWithCultivation: (sheetId: string, plantId: string, input: SheetPlantFormInput) => Promise<void>;
   updateSheetPlant: (sheetPlantId: string, input: SheetPlantFormInput) => Promise<void>;
   stopSheetPlant: (sheetPlantId: string) => Promise<void>;
   addWorkLog: (input: Pick<WorkLog, "managementSheetId" | "managementSheetPlantId" | "workDate" | "workType" | "content" | "author">, photo?: AttachedPhotoInput) => Promise<WorkLog>;
@@ -536,6 +537,35 @@ export const useGardenStore = create<GardenState>((set, get) => ({
         finalHarvestDate: "",
         cultivationStatus: "",
         notes: "",
+        isActive: true,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      });
+    });
+  },
+
+  async addPlantToSheetWithCultivation(sheetId, plantId, input) {
+    await persistMutation(set, () => get().data, "관리표에 식물을 추가했습니다.", (data) => {
+      const sheet = data.managementSheets.find((item) => item.id === sheetId);
+      if (!sheet || sheet.status !== "ACTIVE") throw new Error("활성 관리표에만 식물을 등록할 수 있습니다.");
+      const plant = data.plants.find((item) => item.id === plantId);
+      if (!plant) throw new Error("존재하지 않는 식물입니다.");
+      const validation = validateAddSheetPlant(data.sheetPlants, sheetId, plantId);
+      if (validation) throw new Error(validation);
+      const duplicateCultivation = data.sheetPlants.some((item) => (
+        item.managementSheetId === sheetId &&
+        item.isActive &&
+        item.plantId === plantId &&
+        item.plantedDate === input.plantedDate &&
+        item.plantingMethod === input.plantingMethod
+      ));
+      if (duplicateCultivation) throw new Error("이미 같은 심은날짜와 심는방식으로 등록되어 있습니다. 날짜 또는 방식을 다르게 입력해 주세요.");
+      const timestamp = nowIso();
+      data.sheetPlants.push({
+        id: makeId("sheetPlant"),
+        managementSheetId: sheetId,
+        plantId,
+        ...input,
         isActive: true,
         createdAt: timestamp,
         updatedAt: timestamp

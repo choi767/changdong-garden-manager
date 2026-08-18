@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useRef } from "react";
 import { Calendar, ImagePlus, Sprout } from "lucide-react";
 import StatusPill from "../../components/common/StatusPill";
-import type { Photo, PlantCategory, ScheduleReminder } from "../../domain/entities/models";
+import type { ManagementSheetPlant, Photo, PlantCategory, ScheduleReminder } from "../../domain/entities/models";
 import { cultivationStatusLabel, plantingMethodLabel, sunlightLabel, type CultivationStatus, type PlantingMethod } from "../../domain/enums/status";
 import { getBedLabelList, getCurrentBedsForGroup, getPastBedsForGroup, getSheetPlants, makeSheetPlantDisplayNameMap } from "../../domain/services/selectors";
 import { MAX_SHEET_PLANTS } from "../../domain/services/plantRules";
@@ -24,6 +24,7 @@ const THUMBNAIL_QUALITY = 0.6;
 const PHOTO_ACCEPT = "image/*,.jpg,.jpeg,.png,.webp,.heic,.heif";
 type RecordPhotoKind = "work" | "observation" | "pest" | "harvest";
 type RecordPhotoType = NonNullable<Photo["recordType"]>;
+type SheetPlantFormInput = Pick<ManagementSheetPlant, "plantedDate" | "plantingMethod" | "expectedHarvestPeriod" | "finalHarvestDate" | "cultivationStatus" | "notes">;
 
 function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -179,7 +180,7 @@ export default function ManagementSheetPage() {
   const data = useGardenStore((state) => state.data);
   const addBedsToGroup = useGardenStore((state) => state.addBedsToGroup);
   const removeBedsFromGroup = useGardenStore((state) => state.removeBedsFromGroup);
-  const addPlantToSheet = useGardenStore((state) => state.addPlantToSheet);
+  const addPlantToSheetWithCultivation = useGardenStore((state) => state.addPlantToSheetWithCultivation);
   const updateSheetPlant = useGardenStore((state) => state.updateSheetPlant);
   const stopSheetPlant = useGardenStore((state) => state.stopSheetPlant);
   const addWorkLog = useGardenStore((state) => state.addWorkLog);
@@ -206,6 +207,7 @@ export default function ManagementSheetPage() {
   const [selectedAddBeds, setSelectedAddBeds] = useState<string[]>([]);
   const [selectedRemoveBeds, setSelectedRemoveBeds] = useState<string[]>([]);
   const [plantId, setPlantId] = useState("");
+  const [pendingNewPlantId, setPendingNewPlantId] = useState("");
   const [workDate, setWorkDate] = useState(todayIsoDate());
   const [workPlantId, setWorkPlantId] = useState("");
   const [workType, setWorkType] = useState("물주기");
@@ -328,6 +330,11 @@ export default function ManagementSheetPage() {
   const addableBeds = data.beds.filter((bed) => bed.zoneId === group.zoneId && bed.status === "FALLOW" && bed.isActive);
   const activePlants = [...data.plants].sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
   const plantAddDisabled = sheetPlants.length >= MAX_SHEET_PLANTS || sheet.status !== "ACTIVE";
+  const pendingNewPlant = activePlants.find((item) => item.id === pendingNewPlantId) ?? null;
+  const pendingNewPlantDuplicateCount = pendingNewPlant ? sheetPlants.filter((item) => item.plantId === pendingNewPlant.id).length : 0;
+  const pendingNewPlantDisplayName = pendingNewPlant
+    ? pendingNewPlantDuplicateCount === 0 ? pendingNewPlant.name : `${pendingNewPlant.name}(추가${pendingNewPlantDuplicateCount})`
+    : "";
   const workLogs = data.workLogs.filter((log) => log.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const harvestRecords = data.harvestRecords.filter((record) => record.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const visibleHarvestRecords = showAllHarvestRecords ? harvestRecords : harvestRecords.slice(0, 5);
@@ -346,7 +353,7 @@ export default function ManagementSheetPage() {
   const pendingCultivation = sheet.status === "ACTIVE"
     ? sheetPlants.find((item) => needsCultivationSave(item) || dirtyCultivationIds.includes(item.id)) ?? null
     : null;
-  const cultivationBlocksOtherActions = Boolean(pendingCultivation);
+  const cultivationBlocksOtherActions = Boolean(pendingCultivation || pendingNewPlant);
 
   function toggle(list: string[], setList: (ids: string[]) => void, id: string) {
     setList(list.includes(id) ? list.filter((item) => item !== id) : [...list, id]);
@@ -410,6 +417,18 @@ export default function ManagementSheetPage() {
     cultivationSaveRefs.current[sheetPlantId] = element;
   }
 
+  function readCultivationForm(form: HTMLFormElement): SheetPlantFormInput {
+    const formData = new FormData(form);
+    return {
+      plantedDate: String(formData.get("plantedDate") || ""),
+      plantingMethod: String(formData.get("plantingMethod") || "") as PlantingMethod | "",
+      expectedHarvestPeriod: String(formData.get("expectedHarvestPeriod") || ""),
+      finalHarvestDate: String(formData.get("finalHarvestDate") || ""),
+      cultivationStatus: String(formData.get("cultivationStatus") || "GROWING") as CultivationStatus,
+      notes: String(formData.get("notes") || "")
+    };
+  }
+
   function requireCultivationSaved(): boolean {
     if (!pendingCultivation) return true;
     const plantName = sheetPlantName(pendingCultivation.id);
@@ -420,10 +439,8 @@ export default function ManagementSheetPage() {
 
   async function onUpdateSheetPlant(event: FormEvent<HTMLFormElement>, sheetPlantId: string) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const plantedDate = String(formData.get("plantedDate") || "");
-    const plantingMethod = String(formData.get("plantingMethod") || "") as PlantingMethod | "";
-    if (!plantedDate || !plantingMethod) {
+    const cultivationInput = readCultivationForm(event.currentTarget);
+    if (!cultivationInput.plantedDate || !cultivationInput.plantingMethod) {
       setCultivationRequiredMessageId(sheetPlantId);
       return;
     }
@@ -432,8 +449,8 @@ export default function ManagementSheetPage() {
       ? sheetPlants.find((item) => (
         item.id !== sheetPlantId &&
         item.plantId === currentSheetPlant.plantId &&
-        item.plantedDate === plantedDate &&
-        item.plantingMethod === plantingMethod
+        item.plantedDate === cultivationInput.plantedDate &&
+        item.plantingMethod === cultivationInput.plantingMethod
       ))
       : null;
     if (samePlantWithSameCultivation) {
@@ -442,14 +459,7 @@ export default function ManagementSheetPage() {
       return;
     }
     if (!window.confirm("재배 정보를 수정하시겠습니까?")) return;
-    await run(() => updateSheetPlant(sheetPlantId, {
-      plantedDate,
-      plantingMethod,
-      expectedHarvestPeriod: String(formData.get("expectedHarvestPeriod") || ""),
-      finalHarvestDate: String(formData.get("finalHarvestDate") || ""),
-      cultivationStatus: String(formData.get("cultivationStatus") || "GROWING") as CultivationStatus,
-      notes: String(formData.get("notes") || "")
-    }));
+    await run(() => updateSheetPlant(sheetPlantId, cultivationInput));
     setDirtyCultivationIds((ids) => ids.filter((id) => id !== sheetPlantId));
     setCultivationRequiredMessageId("");
     setCultivationBlockMessage("");
@@ -483,9 +493,32 @@ export default function ManagementSheetPage() {
       const confirmed = window.confirm(`${selectedPlant.name}가 이미 등록되어 있습니다. 심은날짜 또는 심는방식이 다른 추가 재배로 등록하시겠습니까?`);
       if (!confirmed) return;
     }
+    setError("");
+    setPendingNewPlantId(plantId);
+    setPlantId("");
+  }
+
+  async function onSavePendingNewPlant(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!pendingNewPlant) return;
+    const cultivationInput = readCultivationForm(event.currentTarget);
+    if (!cultivationInput.plantedDate || !cultivationInput.plantingMethod) {
+      setError("심은날짜와 심는방식을 입력해 주세요.");
+      return;
+    }
+    const samePlantWithSameCultivation = sheetPlants.find((item) => (
+      item.plantId === pendingNewPlant.id &&
+      item.plantedDate === cultivationInput.plantedDate &&
+      item.plantingMethod === cultivationInput.plantingMethod
+    ));
+    if (samePlantWithSameCultivation) {
+      setError(`${pendingNewPlantDisplayName}은 이미 같은 심은날짜와 심는방식으로 등록되어 있습니다. 날짜 또는 방식을 다르게 입력해 주세요.`);
+      return;
+    }
+    if (!window.confirm(`${pendingNewPlantDisplayName} 재배정보를 저장하시겠습니까?`)) return;
     await run(async () => {
-      await addPlantToSheet(activeSheet.id, plantId);
-      setPlantId("");
+      await addPlantToSheetWithCultivation(activeSheet.id, pendingNewPlant.id, cultivationInput);
+      setPendingNewPlantId("");
     });
   }
 
@@ -947,7 +980,7 @@ export default function ManagementSheetPage() {
           </div>
           <div className="sheet-status-line">
             <StatusPill status={sheet.status} />
-            {currentPlantNames.length > 0 && <span className="sheet-status-plants">({currentPlantNames.join(", ")})</span>}
+            {currentPlantNames.length > 0 && <span className="sheet-status-plants">{currentPlantNames.join(", ")}</span>}
           </div>
         </div>
       </header>
@@ -989,7 +1022,7 @@ export default function ManagementSheetPage() {
 
       <section className="dashboard-grid">
         <article className="panel">
-          <h2>식물 목록 (현재 {sheetPlants.length}종 재배중)</h2>
+          <h2>식물 목록 (현재 {sheetPlants.length}개 재배중)</h2>
           {pendingCultivation && (
             <p className="cultivation-required-hint">
               {sheetPlantName(pendingCultivation.id)} 재배정보를 저장해야 다른 기록을 입력할 수 있습니다.
@@ -1083,6 +1116,58 @@ export default function ManagementSheetPage() {
               </div>
               );
             })}
+            {pendingNewPlant && (
+              <div className="plant-card cultivation-card-locked">
+                <div className="card-title-row">
+                  <div>
+                    <strong>{pendingNewPlantDisplayName}/{plantCategoryLabel[pendingNewPlant.category ?? "CROP"]}</strong>
+                    <p className="pending-text">재배 정보 저장 필요</p>
+                  </div>
+                  <button className="danger-button compact-action" type="button" onClick={() => setPendingNewPlantId("")}>취소</button>
+                </div>
+                <form className="cultivation-info" onSubmit={(event) => void onSavePendingNewPlant(event)}>
+                  <h3>재배 정보</h3>
+                  <label>
+                    심은날짜(필수)
+                    <input name="plantedDate" type="date" defaultValue={todayIsoDate()} />
+                  </label>
+                  <label>
+                    심은방식(필수)
+                    <select name="plantingMethod" defaultValue="">
+                      <option value="">선택 필요</option>
+                      <option value="SEED">파종</option>
+                      <option value="SEEDLING">묘종</option>
+                      <option value="OTHER">기타</option>
+                    </select>
+                  </label>
+                  <label>
+                    예상수확 날짜
+                    <input name="expectedHarvestPeriod" type="date" defaultValue="" />
+                  </label>
+                  <label>
+                    실제수확날짜
+                    <input name="finalHarvestDate" type="date" defaultValue="" />
+                  </label>
+                  <label>
+                    재배상태
+                    <select name="cultivationStatus" defaultValue="GROWING">
+                      <option value="">선택 필요</option>
+                      <option value="PLANNED">재배 예정</option>
+                      <option value="GROWING">재배중</option>
+                      <option value="HARVESTED">수확 완료</option>
+                      <option value="STOPPED">재배 중단</option>
+                    </select>
+                  </label>
+                  <label className="span-2">
+                    식물별 메모
+                    <textarea name="notes" defaultValue="" />
+                  </label>
+                  <button className="primary-button span-2 attention-button cultivation-save-focus" type="submit">
+                    재배 정보 저장
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
           <form className="inline-form sheet-plant-add-form" onSubmit={onAddPlant}>
             <select className="sheet-plant-select" value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || activePlants.length === 0 || cultivationBlocksOtherActions}>
