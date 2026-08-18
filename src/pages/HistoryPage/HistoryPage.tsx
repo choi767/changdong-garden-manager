@@ -62,7 +62,15 @@ export default function HistoryPage() {
       .filter((row) => !filters.month || row.sheet.startDate.slice(5, 7) === filters.month.padStart(2, "0"))
       .filter((row) => !filters.zone || row.group?.zoneNumber === Number(filters.zone))
       .filter((row) => !filters.bedNo || row.beds.some((bed) => bed.bedNumber === Number(filters.bedNo)))
-      .filter((row) => !normalizedPlantQuery || row.plants.some((plant) => normalizeSearchText(plant).includes(normalizedPlantQuery)));
+      .filter((row) => !normalizedPlantQuery || row.plants.some((plant) => normalizeSearchText(plant).includes(normalizedPlantQuery)))
+      .sort((rowA, rowB) => {
+        const zoneA = rowA.group?.zoneNumber ?? Number.MAX_SAFE_INTEGER;
+        const zoneB = rowB.group?.zoneNumber ?? Number.MAX_SAFE_INTEGER;
+        if (zoneA !== zoneB) return zoneA - zoneB;
+        const groupA = rowA.group?.groupNumber ?? Number.MAX_SAFE_INTEGER;
+        const groupB = rowB.group?.groupNumber ?? Number.MAX_SAFE_INTEGER;
+        return groupA - groupB;
+      });
   }, [appliedFilters, data]);
 
   const closedHistorySummary = useMemo(() => {
