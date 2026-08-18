@@ -4,6 +4,7 @@ import { CheckCircle2, Trash2 } from "lucide-react";
 import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
 import { useGardenStore } from "../../stores/gardenStore";
 import type { ScheduleReminder, WorkLog } from "../../domain/entities/models";
+import { getSheetPlantDisplayName } from "../../domain/services/selectors";
 
 function uniqueByBatch<T extends { id: string; batchId: string | null }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -58,10 +59,7 @@ export default function ScheduleWorkPage() {
   }
 
   function plantName(sheetPlantId: string | null): string {
-    if (!sheetPlantId) return "식물명미지정";
-    const sheetPlant = appData.sheetPlants.find((item) => item.id === sheetPlantId);
-    const plant = sheetPlant ? appData.plants.find((item) => item.id === sheetPlant.plantId) : null;
-    return plant?.name ?? "삭제된 식물";
+    return getSheetPlantDisplayName(appData, sheetPlantId);
   }
 
   function photosForWorkRecord(recordId: string) {

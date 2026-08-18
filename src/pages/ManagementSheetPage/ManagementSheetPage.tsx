@@ -5,7 +5,7 @@ import { Calendar, ImagePlus, Sprout } from "lucide-react";
 import StatusPill from "../../components/common/StatusPill";
 import type { Photo, PlantCategory, ScheduleReminder } from "../../domain/entities/models";
 import { cultivationStatusLabel, plantingMethodLabel, sunlightLabel, type CultivationStatus, type PlantingMethod } from "../../domain/enums/status";
-import { getBedLabelList, getCurrentBedsForGroup, getPastBedsForGroup, getSheetPlants } from "../../domain/services/selectors";
+import { getBedLabelList, getCurrentBedsForGroup, getPastBedsForGroup, getSheetPlants, makeSheetPlantDisplayNameMap } from "../../domain/services/selectors";
 import { MAX_SHEET_PLANTS } from "../../domain/services/plantRules";
 import { todayIsoDate } from "../../utils/id";
 import { useGardenStore } from "../../stores/gardenStore";
@@ -320,12 +320,13 @@ export default function ManagementSheetPage() {
   const currentBeds = getCurrentBedsForGroup(data, group.id);
   const pastBeds = getPastBedsForGroup(data, group.id);
   const sheetPlants = getSheetPlants(data, sheet.id);
+  const sheetPlantDisplayNames = makeSheetPlantDisplayNameMap(sheetPlants);
   const currentPlantNames = sheetPlants
-    .map((item) => item.plant?.name)
+    .map((item) => sheetPlantDisplayNames.get(item.id) ?? item.plant?.name)
     .filter((name): name is string => Boolean(name))
     .sort((a, b) => a.localeCompare(b, "ko-KR"));
   const addableBeds = data.beds.filter((bed) => bed.zoneId === group.zoneId && bed.status === "FALLOW" && bed.isActive);
-  const activePlants = data.plants.filter((plant) => !sheetPlants.some((item) => item.plantId === plant.id)).sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
+  const activePlants = [...data.plants].sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
   const plantAddDisabled = sheetPlants.length >= MAX_SHEET_PLANTS || sheet.status !== "ACTIVE";
   const workLogs = data.workLogs.filter((log) => log.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const harvestRecords = data.harvestRecords.filter((record) => record.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -391,8 +392,7 @@ export default function ManagementSheetPage() {
 
   function sheetPlantName(sheetPlantId: string | null): string {
     if (!sheetPlantId) return "식물명미지정";
-    const sheetPlant = sheetPlants.find((item) => item.id === sheetPlantId);
-    return sheetPlant?.plant?.name ?? "삭제된 식물";
+    return sheetPlantDisplayNames.get(sheetPlantId) ?? "삭제된 식물";
   }
 
   function optionalLinkedPlantId(value: string): string {
@@ -412,7 +412,7 @@ export default function ManagementSheetPage() {
 
   function requireCultivationSaved(): boolean {
     if (!pendingCultivation) return true;
-    const plantName = pendingCultivation.plant?.name ?? "새 식물";
+    const plantName = sheetPlantName(pendingCultivation.id);
     setCultivationBlockMessage(`${plantName} 재배정보를 먼저 저장해 주세요.`);
     focusCultivationSave(pendingCultivation.id);
     return false;
@@ -424,6 +424,20 @@ export default function ManagementSheetPage() {
     const plantedDate = String(formData.get("plantedDate") || "");
     const plantingMethod = String(formData.get("plantingMethod") || "") as PlantingMethod | "";
     if (!plantedDate || !plantingMethod) {
+      setCultivationRequiredMessageId(sheetPlantId);
+      return;
+    }
+    const currentSheetPlant = sheetPlants.find((item) => item.id === sheetPlantId);
+    const samePlantWithSameCultivation = currentSheetPlant
+      ? sheetPlants.find((item) => (
+        item.id !== sheetPlantId &&
+        item.plantId === currentSheetPlant.plantId &&
+        item.plantedDate === plantedDate &&
+        item.plantingMethod === plantingMethod
+      ))
+      : null;
+    if (samePlantWithSameCultivation) {
+      setError(`${sheetPlantName(sheetPlantId)}은 이미 같은 심은날짜와 심는방식으로 등록되어 있습니다. 날짜 또는 방식을 다르게 입력해 주세요.`);
       setCultivationRequiredMessageId(sheetPlantId);
       return;
     }
@@ -463,6 +477,12 @@ export default function ManagementSheetPage() {
   async function onAddPlant(event: FormEvent) {
     event.preventDefault();
     if (!requireCultivationSaved()) return;
+    const selectedPlant = activePlants.find((item) => item.id === plantId);
+    const duplicateCount = sheetPlants.filter((item) => item.plantId === plantId).length;
+    if (selectedPlant && duplicateCount > 0) {
+      const confirmed = window.confirm(`${selectedPlant.name}가 이미 등록되어 있습니다. 심은날짜 또는 심는방식이 다른 추가 재배로 등록하시겠습니까?`);
+      if (!confirmed) return;
+    }
     await run(async () => {
       await addPlantToSheet(activeSheet.id, plantId);
       setPlantId("");
@@ -972,7 +992,7 @@ export default function ManagementSheetPage() {
           <h2>식물 목록 (현재 {sheetPlants.length}종 재배중)</h2>
           {pendingCultivation && (
             <p className="cultivation-required-hint">
-              {pendingCultivation.plant?.name ?? "새 식물"} 재배정보를 저장해야 다른 기록을 입력할 수 있습니다.
+              {sheetPlantName(pendingCultivation.id)} 재배정보를 저장해야 다른 기록을 입력할 수 있습니다.
             </p>
           )}
           <div className="card-list compact">
@@ -982,7 +1002,7 @@ export default function ManagementSheetPage() {
               <div className={`plant-card ${pendingCultivation?.id === item.id ? "cultivation-card-locked" : ""}`} key={item.id}>
                 <div className="card-title-row">
                   <div>
-                    <strong>{item.plant ? `${item.plant.name}/${plantCategoryLabel[item.plant.category ?? "CROP"]}` : "삭제된 식물"}</strong>
+                    <strong>{item.plant ? `${sheetPlantName(item.id)}/${plantCategoryLabel[item.plant.category ?? "CROP"]}` : "삭제된 식물"}</strong>
                     <p className={needsCultivationSave(item) ? "pending-text" : ""}>{cultivationSummary(item)}</p>
                   </div>
                   {sheet.status === "ACTIVE" && <button className="danger-button compact-action" type="button" onClick={() => void runConfirmed("이 식물을 관리표에서 해제하시겠습니까?", () => stopSheetPlant(item.id))}>삭제</button>}
@@ -1088,7 +1108,7 @@ export default function ManagementSheetPage() {
               대상식물
               <select value={workPlantId} onChange={(event) => setWorkPlantId(event.target.value)}>
                 <option value="">지정안함</option>
-                {sheetPlants.map((item) => <option key={item.id} value={item.id}>{item.plant?.name ?? "삭제된 식물"}</option>)}
+                {sheetPlants.map((item) => <option key={item.id} value={item.id}>{sheetPlantName(item.id)}</option>)}
               </select>
             </label>
             <label>
@@ -1227,7 +1247,7 @@ export default function ManagementSheetPage() {
               연결 식물
               <select value={optionalLinkedPlantId(observationPlantId)} onChange={(event) => setObservationPlantId(event.target.value)}>
                 <option value="">지정안함</option>
-                {sheetPlants.map((item) => <option key={item.id} value={item.id}>{item.plant?.name ?? "삭제된 식물"}</option>)}
+                {sheetPlants.map((item) => <option key={item.id} value={item.id}>{sheetPlantName(item.id)}</option>)}
               </select>
             </label>
             <label className="span-2">
@@ -1280,7 +1300,7 @@ export default function ManagementSheetPage() {
               연결 식물
               <select value={optionalLinkedPlantId(pestPlantId)} onChange={(event) => setPestPlantId(event.target.value)}>
                 <option value="">지정안함</option>
-                {sheetPlants.map((item) => <option key={item.id} value={item.id}>{item.plant?.name ?? "삭제된 식물"}</option>)}
+                {sheetPlants.map((item) => <option key={item.id} value={item.id}>{sheetPlantName(item.id)}</option>)}
               </select>
             </label>
             <label>
@@ -1467,7 +1487,7 @@ export default function ManagementSheetPage() {
               수확 식물
               <select value={harvestPlantId} onChange={(event) => setHarvestPlantId(event.target.value)}>
                 <option value="">식물 선택</option>
-                {sheetPlants.map((item) => <option key={item.id} value={item.id}>{item.plant?.name ?? "삭제된 식물"}</option>)}
+                {sheetPlants.map((item) => <option key={item.id} value={item.id}>{sheetPlantName(item.id)}</option>)}
               </select>
             </label>
             <label>
@@ -1520,12 +1540,11 @@ export default function ManagementSheetPage() {
           </div>
           <div className="timeline">
             {visibleHarvestRecords.map((record) => {
-              const sheetPlant = sheetPlants.find((item) => item.id === record.managementSheetPlantId);
               return (
                 <div className="timeline-item" key={record.id}>
                   <div>
                     <p>
-                      {record.harvestDate} · {sheetPlant?.plant?.name ?? "삭제된 식물"} · {record.quantity}{record.unit} · {record.quality}
+                      {record.harvestDate} · {sheetPlantName(record.managementSheetPlantId)} · {record.quantity}{record.unit} · {record.quality}
                       {record.notes ? `: ${record.notes}` : ""}
                     </p>
                     <RecordPhotoList photos={photosForRecord("HARVEST", record.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
@@ -1554,7 +1573,7 @@ export default function ManagementSheetPage() {
             연결 식물
             <select value={optionalLinkedPlantId(photoPlantId)} onChange={(event) => setPhotoPlantId(event.target.value)}>
               <option value="">지정안함</option>
-              {sheetPlants.map((item) => <option key={item.id} value={item.id}>{item.plant?.name ?? "삭제된 식물"}</option>)}
+              {sheetPlants.map((item) => <option key={item.id} value={item.id}>{sheetPlantName(item.id)}</option>)}
             </select>
           </label>
           <label className="span-2">
@@ -1583,12 +1602,11 @@ export default function ManagementSheetPage() {
         <p className="hint">PC에서는 파일을, 휴대폰에서는 갤러리 또는 구글포토를 선택하세요. 휴대폰 파일 선택 화면에 갤러리가 바로 안 보이면 오른쪽 위 ... 메뉴에서 찾아보기를 누르세요. 업로드한 사진은 저장 전에 긴 변 {PHOTO_MAX_SIDE}px 이하로 줄이고 JPEG로 압축합니다.</p>
         <div className="photo-grid">
           {photos.map((photo) => {
-            const sheetPlant = sheetPlants.find((item) => item.id === photo.managementSheetPlantId);
             return (
               <PhotoCard
                 key={photo.id}
                 photo={photo}
-                plantName={sheetPlant?.plant?.name ?? "식물명미지정"}
+                plantName={sheetPlantName(photo.managementSheetPlantId)}
                 onPreview={(photo, url) => setPreviewPhoto({ photo, url })}
                 onDelete={() => void onDeletePhoto(photo.id)}
               />

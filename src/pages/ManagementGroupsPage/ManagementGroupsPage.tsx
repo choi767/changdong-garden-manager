@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import StatusPill from "../../components/common/StatusPill";
-import { getBedLabelList, getCurrentBedsForGroup, getGroupSheet } from "../../domain/services/selectors";
+import { getBedLabelList, getCurrentBedsForGroup, getGroupSheet, getSheetPlants, makeSheetPlantDisplayNameMap } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
 
 export default function ManagementGroupsPage() {
@@ -17,9 +17,10 @@ export default function ManagementGroupsPage() {
   function groupPlantNames(groupId: string): string {
     const sheet = getGroupSheet(appData, groupId);
     if (!sheet) return "등록 식물 없음";
-    const names = appData.sheetPlants
-      .filter((item) => item.managementSheetId === sheet.id && item.isActive)
-      .map((item) => appData.plants.find((plant) => plant.id === item.plantId)?.name)
+    const sheetPlants = getSheetPlants(appData, sheet.id);
+    const displayNames = makeSheetPlantDisplayNameMap(sheetPlants);
+    const names = sheetPlants
+      .map((item) => displayNames.get(item.id))
       .filter((name): name is string => Boolean(name))
       .sort((a, b) => a.localeCompare(b, "ko-KR"));
     return names.length ? names.join(", ") : "등록 식물 없음";

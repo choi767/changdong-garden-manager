@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import type { Photo } from "../../domain/entities/models";
+import { getSheetPlantDisplayName } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
 
 function PhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (photo: Photo, url: string) => void }) {
@@ -44,10 +45,7 @@ export default function PhotoOverviewPage() {
   }
 
   function plantName(sheetPlantId: string | null): string {
-    if (!sheetPlantId) return "식물명미지정";
-    const sheetPlant = appData.sheetPlants.find((item) => item.id === sheetPlantId);
-    const plant = sheetPlant ? appData.plants.find((item) => item.id === sheetPlant.plantId) : null;
-    return plant?.name ?? "삭제된 식물";
+    return getSheetPlantDisplayName(appData, sheetPlantId);
   }
 
   async function onDelete(photoId: string) {

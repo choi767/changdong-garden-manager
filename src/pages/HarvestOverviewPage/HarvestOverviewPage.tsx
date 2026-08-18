@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
+import { getSheetPlantDisplayName } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
 
 export default function HarvestOverviewPage() {
@@ -20,9 +21,7 @@ export default function HarvestOverviewPage() {
   }
 
   function plantName(sheetPlantId: string): string {
-    const sheetPlant = appData.sheetPlants.find((item) => item.id === sheetPlantId);
-    const plant = sheetPlant ? appData.plants.find((item) => item.id === sheetPlant.plantId) : null;
-    return plant?.name ?? "삭제된 식물";
+    return getSheetPlantDisplayName(appData, sheetPlantId);
   }
 
   function photosForRecord(recordId: string) {

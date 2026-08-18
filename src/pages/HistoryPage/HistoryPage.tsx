@@ -1,6 +1,6 @@
 import { type FormEvent, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { getBedLabelList, getCurrentBedsForGroup, getPastBedsForGroup, getSheetPlants } from "../../domain/services/selectors";
+import { getBedLabelList, getCurrentBedsForGroup, getPastBedsForGroup, getSheetPlants, makeSheetPlantDisplayNameMap } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
 
 function normalizeSearchText(value: string): string {
@@ -55,8 +55,13 @@ export default function HistoryPage() {
         const currentBeds = group ? getCurrentBedsForGroup(data, group.id) : [];
         const pastBeds = group ? getPastBedsForGroup(data, group.id) : [];
         const allBeds = [...currentBeds, ...pastBeds];
-        const plants = Array.from(new Set(getSheetPlants(data, sheet.id).map((item) => item.plant?.name ?? "").filter(Boolean)));
-        return { sheet, group, beds: allBeds, plants };
+        const sheetPlants = getSheetPlants(data, sheet.id);
+        const displayNames = makeSheetPlantDisplayNameMap(sheetPlants);
+        const plants = sheetPlants.map((item) => item.plant?.name ?? "").filter(Boolean);
+        const plantDisplayNames = sheetPlants
+          .map((item) => displayNames.get(item.id))
+          .filter((name): name is string => Boolean(name));
+        return { sheet, group, beds: allBeds, plants, plantDisplayNames };
       })
       .filter((row) => !filters.year || row.sheet.startDate.startsWith(filters.year))
       .filter((row) => !filters.month || row.sheet.startDate.slice(5, 7) === filters.month.padStart(2, "0"))
@@ -138,7 +143,7 @@ export default function HistoryPage() {
             <div className="card-title-row">
               <strong className="history-result-title">
                 {row.group?.displayCode}
-                {row.plants.length > 0 && <span className="history-result-plants">({row.plants.join(", ")})</span>}
+                {row.plantDisplayNames.length > 0 && <span className="history-result-plants">({row.plantDisplayNames.join(", ")})</span>}
               </strong>
               <Link to={`/sheets/${row.sheet.id}`}>상세</Link>
             </div>
