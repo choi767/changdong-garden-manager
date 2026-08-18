@@ -1177,7 +1177,7 @@ export default function ManagementSheetPage() {
             <button className="primary-button" type="submit" disabled={!plantId || plantAddDisabled || cultivationBlocksOtherActions}><Sprout size={18} /> 추가</button>
             <button className="secondary-button" type="button" onClick={() => setPlantId("")} disabled={!plantId}>취소</button>
           </form>
-          <p className="hint sheet-plant-add-hint">식물DB에서 관리그룹당 최대 5개까지 추가할수 있습니다. 원하는 식물이 없으면 하단의 DB메뉴에서 식물을 추가하고 다시 하십시오</p>
+          <p className="hint sheet-plant-add-hint">식물DB에서 관리그룹당 최대 5회까지 재배정보저장을 할수 있습니다. 원하는 식물이 없으면 하단의 DB메뉴에서 식물을 추가하고 다시 하십시오</p>
         </article>
       </section>
 

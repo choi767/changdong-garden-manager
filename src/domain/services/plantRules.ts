@@ -22,7 +22,7 @@ export function validateNewPlantName(plants: Plant[], name: string): string | nu
 export function validateAddSheetPlant(sheetPlants: ManagementSheetPlant[], managementSheetId: string, plantId: string): string | null {
   const activePlants = sheetPlants.filter((item) => item.managementSheetId === managementSheetId && item.isActive);
   if (activePlants.length >= MAX_SHEET_PLANTS) {
-    return "관리표 하나에는 식물을 최대 5개까지 등록할 수 있습니다.";
+    return "관리표 하나에는 최대 5회까지 재배정보저장을 할 수 있습니다.";
   }
   return null;
 }

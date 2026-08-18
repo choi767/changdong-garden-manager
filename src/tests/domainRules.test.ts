@@ -21,10 +21,10 @@ describe("창동 틀밭관리 V2.1 업무 규칙", () => {
     expect(validateGroupBedSelection(beds)).toBe("관리그룹에는 같은 Zone의 틀만 선택할 수 있습니다.");
   });
 
-  it("관리표 식물은 최대 5개까지만 허용한다", () => {
+  it("관리표 식물은 최대 5회까지만 허용한다", () => {
     const sheetId = "sheet_1";
     const sheetPlants = [1, 2, 3, 4, 5].map((index) => ({ id: `sp_${index}`, managementSheetId: sheetId, plantId: `p_${index}`, plantedDate: "", plantingMethod: "SEEDLING" as const, expectedHarvestPeriod: "", finalHarvestDate: "", cultivationStatus: "GROWING" as const, notes: "", isActive: true, createdAt: "", updatedAt: "" }));
-    expect(validateAddSheetPlant(sheetPlants, sheetId, "p_6")).toBe("관리표 하나에는 식물을 최대 5개까지 등록할 수 있습니다.");
+    expect(validateAddSheetPlant(sheetPlants, sheetId, "p_6")).toBe("관리표 하나에는 최대 5회까지 재배정보저장을 할 수 있습니다.");
   });
 
   it("관리표에는 같은 식물을 여러 번 등록할 수 있고 추가 표시명을 붙인다", () => {
