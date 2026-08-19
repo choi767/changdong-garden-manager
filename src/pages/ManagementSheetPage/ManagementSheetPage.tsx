@@ -534,6 +534,10 @@ export default function ManagementSheetPage() {
       setError("관리 종료일을 선택해 주세요.");
       return;
     }
+    if (closeEndDate < activeSheet.startDate) {
+      setError("시작일보다 이전 날짜는 입력할수 없습니다.");
+      return;
+    }
     if (!window.confirm(`${closeEndDate} 날짜로 관리 종료하시겠습니까?`)) return;
     await run(async () => {
       await closeManagement(activeSheet.id, closeEndDate);
@@ -1479,10 +1483,10 @@ export default function ManagementSheetPage() {
         <div className="modal-backdrop" role="presentation">
           <form className="modal-panel decision-modal form-stack" role="dialog" aria-modal="true" aria-labelledby="close-management-title" onSubmit={onCloseManagement}>
             <h2 id="close-management-title">관리 종료일 선택</h2>
-            <p className="muted-text">과거에 이미 끝난 관리그룹은 실제 종료된 날짜를 선택하세요. 시작일보다 이전 날짜도 입력할 수 있습니다.</p>
+            <p className="muted-text">과거에 이미 끝난 관리그룹은 실제 종료된 날짜를 선택하세요. 시작일보다 이전 날짜는 입력할수 없습니다.</p>
             <label>
               관리 종료일
-              <input type="date" value={closeEndDate} onChange={(event) => setCloseEndDate(event.target.value)} />
+              <input type="date" min={sheet.startDate} value={closeEndDate} onChange={(event) => setCloseEndDate(event.target.value)} />
             </label>
             <p className="hint">관리 시작일: {sheet.startDate}</p>
             <div className="button-row">
