@@ -76,6 +76,7 @@ interface GardenState {
   createGroup: (bedIds: string[], startDate: string) => Promise<ManagementSheet>;
   addBedsToGroup: (groupId: string, bedIds: string[]) => Promise<void>;
   removeBedsFromGroup: (groupId: string, bedIds: string[]) => Promise<void>;
+  updateManagementBasicInfo: (sheetId: string, input: Pick<ManagementSheet, "startDate" | "endDate">) => Promise<void>;
   closeManagement: (sheetId: string, endDate: string) => Promise<void>;
   deleteManagement: (sheetId: string) => Promise<void>;
   restoreManagement: (sheetId: string) => Promise<void>;
@@ -393,6 +394,25 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     await persist(set, data, "선택한 틀을 관리그룹에서 삭제했습니다.");
   },
 
+  async updateManagementBasicInfo(sheetId, input) {
+    const data = requireData(get().data);
+    const sheet = data.managementSheets.find((item) => item.id === sheetId);
+    if (!sheet) throw new Error("존재하지 않는 관리표입니다.");
+    const group = data.managementGroups.find((item) => item.id === sheet.managementGroupId);
+    if (!group) throw new Error("관리그룹을 찾을 수 없습니다.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) throw new Error("관리 시작일을 입력해 주세요.");
+    if (input.endDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.endDate)) throw new Error("관리 종료일을 확인해 주세요.");
+    if (input.endDate && input.endDate < input.startDate) throw new Error("시작일보다 이전 날짜는 입력할수 없습니다.");
+    const timestamp = nowIso();
+    sheet.startDate = input.startDate;
+    sheet.endDate = input.endDate;
+    sheet.updatedAt = timestamp;
+    group.startDate = input.startDate;
+    group.endDate = input.endDate;
+    group.updatedAt = timestamp;
+    await persist(set, data, "관리 기본정보를 저장했습니다.");
+  },
+
   async closeManagement(sheetId, endDate) {
     const data = requireData(get().data);
     const sheet = data.managementSheets.find((item) => item.id === sheetId);
@@ -400,6 +420,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const group = data.managementGroups.find((item) => item.id === sheet.managementGroupId);
     if (!group) throw new Error("관리그룹을 찾을 수 없습니다.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) throw new Error("관리 종료일을 선택해 주세요.");
+    if (endDate < sheet.startDate) throw new Error("시작일보다 이전 날짜는 입력할수 없습니다.");
     const timestamp = nowIso();
     sheet.status = "CLOSED";
     sheet.endDate = endDate;

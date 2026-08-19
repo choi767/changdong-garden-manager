@@ -202,6 +202,7 @@ export default function ManagementSheetPage() {
   const deleteMaterialUsage = useGardenStore((state) => state.deleteMaterialUsage);
   const upsertSheetEvaluation = useGardenStore((state) => state.upsertSheetEvaluation);
   const closeManagement = useGardenStore((state) => state.closeManagement);
+  const updateManagementBasicInfo = useGardenStore((state) => state.updateManagementBasicInfo);
   const deleteManagement = useGardenStore((state) => state.deleteManagement);
   const navigate = useNavigate();
   const [selectedAddBeds, setSelectedAddBeds] = useState<string[]>([]);
@@ -261,6 +262,8 @@ export default function ManagementSheetPage() {
   const [frameModal, setFrameModal] = useState<"add" | "remove" | null>(null);
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [closeEndDate, setCloseEndDate] = useState(todayIsoDate());
+  const [managementStartDate, setManagementStartDate] = useState("");
+  const [managementEndDate, setManagementEndDate] = useState("");
   const [showAllScheduleReminders, setShowAllScheduleReminders] = useState(false);
   const [showAllWorkLogs, setShowAllWorkLogs] = useState(false);
   const [showAllHarvestRecords, setShowAllHarvestRecords] = useState(false);
@@ -286,6 +289,14 @@ export default function ManagementSheetPage() {
     const timer = window.setTimeout(() => setPhotoSaved(false), 2500);
     return () => window.clearTimeout(timer);
   }, [photoSaved]);
+
+  useEffect(() => {
+    if (!data || !sheetId) return;
+    const currentSheet = data.managementSheets.find((item) => item.id === sheetId);
+    if (!currentSheet) return;
+    setManagementStartDate(currentSheet.startDate);
+    setManagementEndDate(currentSheet.endDate ?? "");
+  }, [data, sheetId]);
 
   useEffect(() => {
     if (!pendingCultivationIdForScroll) return;
@@ -543,6 +554,25 @@ export default function ManagementSheetPage() {
       await closeManagement(activeSheet.id, closeEndDate);
       setCloseModalOpen(false);
     });
+  }
+
+  async function onSaveManagementBasicInfo(event: FormEvent) {
+    event.preventDefault();
+    if (!dateInputValue(managementStartDate)) {
+      setError("관리 시작일을 입력해 주세요.");
+      return;
+    }
+    const nextEndDate = isClosedSheet ? managementEndDate : null;
+    if (isClosedSheet && !dateInputValue(managementEndDate)) {
+      setError("관리 종료일을 입력해 주세요.");
+      return;
+    }
+    if (nextEndDate && nextEndDate < managementStartDate) {
+      setError("시작일보다 이전 날짜는 입력할수 없습니다.");
+      return;
+    }
+    if (!window.confirm("관리 기본정보를 수정하시겠습니까?")) return;
+    await run(() => updateManagementBasicInfo(activeSheet.id, { startDate: managementStartDate, endDate: nextEndDate }));
   }
 
   async function onAddSchedule(event: FormEvent) {
@@ -998,11 +1028,24 @@ export default function ManagementSheetPage() {
           <h2>관리 기본정보</h2>
           <dl className="info-grid">
             <dt>Zone</dt><dd>Zone {group.zoneNumber}</dd>
-            <dt>관리 시작일</dt><dd>{sheet.startDate}</dd>
-            <dt>관리 종료일</dt><dd>{sheet.endDate ?? "- -"}</dd>
             <dt>현재 포함 틀</dt><dd>{getBedLabelList(currentBeds)}</dd>
             <dt>과거 포함 틀</dt><dd>{pastBeds.length ? getBedLabelList(pastBeds) : "없음"}</dd>
           </dl>
+          <form className="management-basic-form" onSubmit={onSaveManagementBasicInfo}>
+            <label>
+              관리 시작일
+              <input type="date" value={managementStartDate} onChange={(event) => setManagementStartDate(event.target.value)} />
+            </label>
+            <label>
+              관리 종료일
+              {isClosedSheet ? (
+                <input type="date" min={managementStartDate || undefined} value={managementEndDate} onChange={(event) => setManagementEndDate(event.target.value)} />
+              ) : (
+                <input value="- -" disabled readOnly />
+              )}
+            </label>
+            <button className="primary-button" type="submit">기본정보 저장</button>
+          </form>
           {sheet.status === "ACTIVE" ? (
             <div className="button-row">
               <button className="secondary-button" type="button" onClick={() => setFrameModal("add")}>틀추가</button>
