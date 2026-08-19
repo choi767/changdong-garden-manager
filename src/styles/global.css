@@ -1367,6 +1367,15 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   color: #5c4100;
   font-weight: 900;
 }
+.edit-mode-notice {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e0b422;
+  border-radius: 8px;
+  background: #fff4b8;
+  color: #5c4100;
+  font-weight: 900;
+}
 .form-error {
   margin: 0;
   padding: 12px;

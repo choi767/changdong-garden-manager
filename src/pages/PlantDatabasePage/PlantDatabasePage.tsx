@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Edit3, Plus, Trash2, X } from "lucide-react";
 import { sunlightLabel, type Sunlight } from "../../domain/enums/status";
 import type { Plant, PlantCategory } from "../../domain/entities/models";
@@ -126,6 +126,7 @@ export default function PlantDatabasePage() {
   const [photoInputKey, setPhotoInputKey] = useState(0);
   const [photoUploadStatus, setPhotoUploadStatus] = useState<"idle" | "done">("idle");
   const [error, setError] = useState("");
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const filtered = useMemo(() => {
     const keyword = query.trim();
@@ -160,7 +161,9 @@ export default function PlantDatabasePage() {
     setEditingId(plant.id);
     setForm(toForm(plant));
     setError("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   }
 
   function cancelEdit() {
@@ -316,7 +319,7 @@ export default function PlantDatabasePage() {
       {query && filtered.length === 0 && <p className="empty-text plant-search-result">현재 {query}(이)가 없습니다.</p>}
       {query && filtered.length > 0 && plantCards(filtered)}
 
-      <form className="panel form-stack" onSubmit={onSubmit}>
+      <form className="panel form-stack" ref={formRef} onSubmit={onSubmit}>
         <div className="card-title-row">
           <h2>{editingPlant ? `${editingPlant.name} 수정` : "새 식물 등록"}</h2>
           {editingId && (
@@ -325,6 +328,7 @@ export default function PlantDatabasePage() {
             </button>
           )}
         </div>
+        {editingId && <p className="edit-mode-notice">수정할 내용을 고친 뒤 아래쪽의 식물 정보 수정을 누르세요.</p>}
 
         <div className="plant-form-grid">
           <label>
