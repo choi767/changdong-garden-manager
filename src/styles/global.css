@@ -1387,14 +1387,17 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 }
 
 .notice {
-  position: sticky;
-  top: 10px;
-  z-index: 30;
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 120;
+  width: min(92vw, 620px);
+  transform: translateX(-50%);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 14px;
+  margin: 0;
   padding: 12px 14px;
   border-radius: 8px;
   background: #fff2a8;
