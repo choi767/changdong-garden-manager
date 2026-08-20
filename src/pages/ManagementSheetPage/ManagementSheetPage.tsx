@@ -18,6 +18,7 @@ const plantCategoryLabel: Record<PlantCategory, string> = {
   FLOWER: "화초",
   TREE: "나무"
 };
+const plantCategoryOptions = Object.entries(plantCategoryLabel) as Array<[PlantCategory, string]>;
 const THUMBNAIL_MAX_SIDE = 360;
 const PHOTO_QUALITY = 0.72;
 const THUMBNAIL_QUALITY = 0.6;
@@ -208,6 +209,7 @@ export default function ManagementSheetPage() {
   const [selectedAddBeds, setSelectedAddBeds] = useState<string[]>([]);
   const [selectedRemoveBeds, setSelectedRemoveBeds] = useState<string[]>([]);
   const [plantId, setPlantId] = useState("");
+  const [plantAddCategory, setPlantAddCategory] = useState<PlantCategory>("CROP");
   const [pendingNewPlantId, setPendingNewPlantId] = useState("");
   const [workDate, setWorkDate] = useState(todayIsoDate());
   const [workPlantId, setWorkPlantId] = useState("");
@@ -340,6 +342,7 @@ export default function ManagementSheetPage() {
     .sort((a, b) => a.localeCompare(b, "ko-KR"));
   const addableBeds = data.beds.filter((bed) => bed.zoneId === group.zoneId && bed.status === "FALLOW" && bed.isActive);
   const activePlants = [...data.plants].sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
+  const filteredActivePlants = activePlants.filter((plant) => (plant.category ?? "CROP") === plantAddCategory);
   const plantAddDisabled = sheetPlants.length >= MAX_SHEET_PLANTS || sheet.status !== "ACTIVE";
   const pendingNewPlant = activePlants.find((item) => item.id === pendingNewPlantId) ?? null;
   const pendingNewPlantDuplicateCount = pendingNewPlant ? sheetPlants.filter((item) => item.plantId === pendingNewPlant.id).length : 0;
@@ -1224,9 +1227,21 @@ export default function ManagementSheetPage() {
             )}
           </div>
           <form className="inline-form sheet-plant-add-form" onSubmit={onAddPlant}>
-            <select className="sheet-plant-select" value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || activePlants.length === 0 || cultivationBlocksOtherActions}>
-              <option value="">식물 선택</option>
-              {activePlants.map((plant) => <option key={plant.id} value={plant.id}>{plant.name}</option>)}
+            <select
+              className="sheet-plant-category-select"
+              value={plantAddCategory}
+              onChange={(event) => {
+                setPlantAddCategory(event.target.value as PlantCategory);
+                setPlantId("");
+              }}
+              disabled={plantAddDisabled || cultivationBlocksOtherActions}
+              aria-label="식물 분류 선택"
+            >
+              {plantCategoryOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <select className="sheet-plant-select" value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || filteredActivePlants.length === 0 || cultivationBlocksOtherActions}>
+              <option value="">{plantCategoryLabel[plantAddCategory]} 선택</option>
+              {filteredActivePlants.map((plant) => <option key={plant.id} value={plant.id}>{plant.name}</option>)}
             </select>
             <button className="primary-button" type="submit" disabled={!plantId || plantAddDisabled || cultivationBlocksOtherActions}><Sprout size={18} /> 추가</button>
             <button className="secondary-button" type="button" onClick={() => setPlantId("")} disabled={!plantId}>취소</button>

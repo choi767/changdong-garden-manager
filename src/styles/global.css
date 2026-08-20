@@ -144,6 +144,26 @@ h2 { font-size: 19px; }
 .plant-search-form input {
   min-width: 0;
 }
+.category-filter {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.category-filter button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid #b8c7bb;
+  border-radius: 8px;
+  background: #fff;
+  color: #1b2d22;
+  font-weight: 900;
+  cursor: pointer;
+}
+.category-filter button.selected {
+  border-color: #1f6c45;
+  background: #1f6c45;
+  color: #fff;
+}
 .admin-toggle {
   display: inline-flex;
   grid-template-columns: auto;
@@ -437,12 +457,17 @@ h2 { font-size: 19px; }
 .sheet-plant-add-form {
   margin-top: 18px;
 }
+.sheet-plant-category-select,
 .sheet-plant-select {
   border: 2px solid #1f4f35;
   background: #fff;
   color: var(--ink);
   font-weight: 800;
 }
+.sheet-plant-category-select {
+  min-width: 118px;
+}
+.sheet-plant-category-select:disabled,
 .sheet-plant-select:disabled {
   border-color: #42634e;
   background: #f8faf7;

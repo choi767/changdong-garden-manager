@@ -56,6 +56,7 @@ const plantCategoryLabel: Record<PlantCategory, string> = {
   FLOWER: "화초",
   TREE: "나무"
 };
+const plantCategoryOptions = Object.entries(plantCategoryLabel) as Array<[PlantCategory, string]>;
 
 function toForm(plant: Plant): PlantFormState {
   return {
@@ -121,6 +122,7 @@ export default function PlantDatabasePage() {
   const deletePlant = useGardenStore((state) => state.deletePlant);
   const [searchText, setSearchText] = useState("");
   const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<PlantCategory>("CROP");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PlantFormState>(emptyForm);
   const [photoInputKey, setPhotoInputKey] = useState(0);
@@ -132,9 +134,10 @@ export default function PlantDatabasePage() {
   const filtered = useMemo(() => {
     const keyword = query.trim();
     return (data?.plants ?? [])
+      .filter((plant) => (plant.category ?? "CROP") === selectedCategory)
       .filter((plant) => !keyword || plant.name.includes(keyword) || plant.notes.includes(keyword))
       .sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
-  }, [data, query]);
+  }, [data, query, selectedCategory]);
 
   const categoryCounts = useMemo(() => {
     const plants = data?.plants ?? [];
@@ -308,6 +311,23 @@ export default function PlantDatabasePage() {
         </div>
       </header>
 
+      <div className="category-filter" role="group" aria-label="식물 분류 선택">
+        {plantCategoryOptions.map(([value, label]) => (
+          <button
+            key={value}
+            className={selectedCategory === value ? "selected" : ""}
+            type="button"
+            onClick={() => {
+              setSelectedCategory(value);
+              setSearchText("");
+              setQuery("");
+            }}
+          >
+            {label} {categoryCounts[value]}개
+          </button>
+        ))}
+      </div>
+
       <form className="toolbar plant-search-form" onSubmit={onSearch}>
         <input
           value={searchText}
@@ -321,7 +341,7 @@ export default function PlantDatabasePage() {
         <button className="primary-button" type="submit">검색</button>
       </form>
 
-      {query && filtered.length === 0 && <p className="empty-text plant-search-result">현재 {query}(이)가 없습니다.</p>}
+      {query && filtered.length === 0 && <p className="empty-text plant-search-result">현재 {plantCategoryLabel[selectedCategory]} 중 {query}(이)가 없습니다.</p>}
       {query && filtered.length > 0 && plantCards(filtered)}
 
       <form className="panel form-stack" ref={formRef} onSubmit={onSubmit}>
@@ -428,8 +448,8 @@ export default function PlantDatabasePage() {
         </button>
       </form>
 
-      {!query && data.plants.length > 0 && plantCards(filtered)}
-      {!query && data.plants.length === 0 && <p className="empty-text">등록된 식물이 없습니다. 새 식물 등록에서 식물 DB를 직접 만들어 주세요.</p>}
+      {!query && filtered.length > 0 && plantCards(filtered)}
+      {!query && filtered.length === 0 && <p className="empty-text">등록된 {plantCategoryLabel[selectedCategory]} 식물이 없습니다. 새 식물 등록에서 식물 DB를 직접 만들어 주세요.</p>}
     </div>
   );
 }
