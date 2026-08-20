@@ -176,6 +176,10 @@ function RecordPhotoList({ photos, onPreview }: { photos: Photo[]; onPreview: (p
   );
 }
 
+function compareRecentFirst(aDate: string, aCreatedAt: string, bDate: string, bCreatedAt: string): number {
+  return bDate.localeCompare(aDate) || bCreatedAt.localeCompare(aCreatedAt);
+}
+
 export default function ManagementSheetPage() {
   const { sheetId } = useParams();
   const data = useGardenStore((state) => state.data);
@@ -349,19 +353,19 @@ export default function ManagementSheetPage() {
   const pendingNewPlantDisplayName = pendingNewPlant
     ? pendingNewPlantDuplicateCount === 0 ? pendingNewPlant.name : `${pendingNewPlant.name}(추가${pendingNewPlantDuplicateCount})`
     : "";
-  const workLogs = data.workLogs.filter((log) => log.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const harvestRecords = data.harvestRecords.filter((record) => record.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const workLogs = data.workLogs.filter((log) => log.managementSheetId === sheet.id).sort((a, b) => compareRecentFirst(a.workDate, a.createdAt, b.workDate, b.createdAt));
+  const harvestRecords = data.harvestRecords.filter((record) => record.managementSheetId === sheet.id).sort((a, b) => compareRecentFirst(a.harvestDate, a.createdAt, b.harvestDate, b.createdAt));
   const visibleHarvestRecords = showAllHarvestRecords ? harvestRecords : harvestRecords.slice(0, 5);
-  const photos = data.photos.filter((photo) => photo.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const photos = data.photos.filter((photo) => photo.managementSheetId === sheet.id).sort((a, b) => compareRecentFirst(a.photoDate, a.createdAt, b.photoDate, b.createdAt));
   const defaultLinkedPlantId = sheetPlants.length === 1 ? sheetPlants[0].id : "";
-  const scheduleReminders = (data.scheduleReminders ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => Number(a.isDone) - Number(b.isDone) || a.dueDate.localeCompare(b.dueDate) || b.createdAt.localeCompare(a.createdAt));
+  const scheduleReminders = (data.scheduleReminders ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => Number(a.isDone) - Number(b.isDone) || compareRecentFirst(a.dueDate, a.createdAt, b.dueDate, b.createdAt));
   const pendingScheduleReminders = scheduleReminders.filter((item) => !item.isDone);
   const visibleScheduleReminders = showAllScheduleReminders ? pendingScheduleReminders : pendingScheduleReminders.slice(0, 5);
   const visibleWorkLogs = showAllWorkLogs ? workLogs : workLogs.slice(0, 5);
-  const observationMemos = (data.observationMemos ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
-  const pestRecords = (data.pestRecords ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+  const observationMemos = (data.observationMemos ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => compareRecentFirst(a.observedDate, a.createdAt, b.observedDate, b.createdAt)).slice(0, 5);
+  const pestRecords = (data.pestRecords ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => compareRecentFirst(a.detectedDate, a.createdAt, b.detectedDate, b.createdAt)).slice(0, 5);
   const photosForRecord = (recordType: RecordPhotoType, recordId: string) => photos.filter((photo) => photo.recordType === recordType && photo.recordId === recordId);
-  const materialUsages = (data.materialUsages ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+  const materialUsages = (data.materialUsages ?? []).filter((item) => item.managementSheetId === sheet.id).sort((a, b) => compareRecentFirst(a.usedDate, a.createdAt, b.usedDate, b.createdAt)).slice(0, 5);
   const evaluation = (data.sheetEvaluations ?? []).find((item) => item.managementSheetId === sheet.id);
   const membershipEvents = data.memberships.filter((item) => item.managementGroupId === group.id);
   const pendingCultivation = sheet.status === "ACTIVE"
