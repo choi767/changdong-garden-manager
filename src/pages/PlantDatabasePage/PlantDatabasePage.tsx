@@ -128,6 +128,7 @@ export default function PlantDatabasePage() {
   const [photoInputKey, setPhotoInputKey] = useState(0);
   const [photoUploadStatus, setPhotoUploadStatus] = useState<"idle" | "processing" | "done">("idle");
   const [error, setError] = useState("");
+  const pageTopRef = useRef<HTMLDivElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const submitButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -178,6 +179,23 @@ export default function PlantDatabasePage() {
     setError("");
   }
 
+  function scrollToPlantDbTop() {
+    const mainPanel = pageTopRef.current?.closest(".main-panel");
+    if (mainPanel instanceof HTMLElement) {
+      mainPanel.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+    document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    pageTopRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+  }
+
+  function restorePlantDbTopAfterLayoutChange() {
+    window.requestAnimationFrame(() => {
+      scrollToPlantDbTop();
+      window.setTimeout(scrollToPlantDbTop, 80);
+    });
+  }
+
   async function onPhotoChange(file: File | undefined) {
     if (!file) return;
     setError("");
@@ -206,6 +224,7 @@ export default function PlantDatabasePage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError("");
+    const savedCategory = form.category;
     try {
       if (editingId) {
         if (!window.confirm("식물 정보를 수정하시겠습니까?")) return;
@@ -213,7 +232,11 @@ export default function PlantDatabasePage() {
       } else {
         await addPlant(form);
       }
+      setSelectedCategory(savedCategory);
+      setSearchText("");
+      setQuery("");
       cancelEdit();
+      restorePlantDbTopAfterLayoutChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "식물 DB 저장에 실패했습니다.");
     }
@@ -297,7 +320,7 @@ export default function PlantDatabasePage() {
   }
 
   return (
-    <div className="page">
+    <div className="page" ref={pageTopRef}>
       <header className="page-header">
         <div>
           <p className="eyebrow">식물 기본 DB</p>
