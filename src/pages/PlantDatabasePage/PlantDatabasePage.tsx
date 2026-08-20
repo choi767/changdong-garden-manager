@@ -124,9 +124,10 @@ export default function PlantDatabasePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PlantFormState>(emptyForm);
   const [photoInputKey, setPhotoInputKey] = useState(0);
-  const [photoUploadStatus, setPhotoUploadStatus] = useState<"idle" | "done">("idle");
+  const [photoUploadStatus, setPhotoUploadStatus] = useState<"idle" | "processing" | "done">("idle");
   const [error, setError] = useState("");
   const formRef = useRef<HTMLFormElement | null>(null);
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const filtered = useMemo(() => {
     const keyword = query.trim();
@@ -177,10 +178,14 @@ export default function PlantDatabasePage() {
   async function onPhotoChange(file: File | undefined) {
     if (!file) return;
     setError("");
+    setPhotoUploadStatus("processing");
     try {
       const compressed = await compressPlantPhoto(file);
       setForm((prev) => ({ ...prev, ...compressed }));
       setPhotoUploadStatus("done");
+      window.setTimeout(() => {
+        submitButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "사진 등록에 실패했습니다.");
       setPhotoUploadStatus("idle");
@@ -399,9 +404,9 @@ export default function PlantDatabasePage() {
             <label className="plant-photo-upload-label">
               사진 등록
               <span className={`secondary-button plant-photo-upload-button ${photoUploadStatus === "done" ? "upload-done" : ""}`}>
-                {photoUploadStatus === "done" ? "등록완료" : "파일/갤러리/구글포토 선택"}
+                {photoUploadStatus === "processing" ? "사진 처리중..." : photoUploadStatus === "done" ? "등록완료" : "파일/갤러리/구글포토 선택"}
               </span>
-              <input key={photoInputKey} className="visually-hidden-file" type="file" accept={PLANT_PHOTO_ACCEPT} onChange={(event) => void onPhotoChange(event.target.files?.[0])} />
+              <input key={photoInputKey} className="visually-hidden-file" type="file" accept={PLANT_PHOTO_ACCEPT} disabled={photoUploadStatus === "processing"} onChange={(event) => void onPhotoChange(event.target.files?.[0])} />
             </label>
             <p className="hint">PC에서는 파일을, 휴대폰에서는 갤러리 또는 구글포토를 선택하세요. 사진은 긴 변 {PLANT_PHOTO_MAX_SIDE}px 이하 JPEG로 압축합니다.</p>
             {form.imageDataUrl && (
@@ -418,7 +423,7 @@ export default function PlantDatabasePage() {
         </div>
 
         {error && <p className="form-error">{error}</p>}
-        <button className="primary-button wide" type="submit">
+        <button className="primary-button wide" type="submit" ref={submitButtonRef} disabled={photoUploadStatus === "processing"}>
           <Plus size={18} /> {editingId ? "식물 정보 수정" : "식물 DB에 등록"}
         </button>
       </form>
