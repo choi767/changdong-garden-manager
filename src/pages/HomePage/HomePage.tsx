@@ -2,7 +2,7 @@ import { FormEvent, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StatusPill from "../../components/common/StatusPill";
 import { bedStatusLabel } from "../../domain/enums/status";
-import { getActiveGroupForBedId, getBedLabelList, getCurrentBedsForGroup, getGroupSheet } from "../../domain/services/selectors";
+import { getActiveGroupForBedId, getBedLabelList, getCurrentBedsForGroup, getGroupSheet, getSheetPlants, makeSheetPlantDisplayNameMap } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
 
 type MapPosition = {
@@ -190,9 +190,10 @@ export default function HomePage() {
   function groupPlantNames(groupId: string): string {
     const sheet = getGroupSheet(appData, groupId);
     if (!sheet) return "등록 식물 없음";
-    const names = appData.sheetPlants
-      .filter((item) => item.managementSheetId === sheet.id && item.isActive)
-      .map((item) => appData.plants.find((plant) => plant.id === item.plantId)?.name)
+    const sheetPlants = getSheetPlants(appData, sheet.id);
+    const displayNames = makeSheetPlantDisplayNameMap(sheetPlants);
+    const names = sheetPlants
+      .map((item) => displayNames.get(item.id))
       .filter((name): name is string => Boolean(name))
       .sort((a, b) => a.localeCompare(b, "ko-KR"));
     return names.length ? names.join(", ") : "등록 식물 없음";
@@ -239,9 +240,10 @@ export default function HomePage() {
 
     const sheet = getGroupSheet(appData, activeGroup.id);
     const groupBeds = getCurrentBedsForGroup(appData, activeGroup.id);
+    const plantNames = groupPlantNames(activeGroup.id);
     setHighlightGroupId(activeGroup.id);
     await wait(2000);
-    const shouldMove = window.confirm(`${activeGroup.displayCode} (${getBedLabelList(groupBeds)}) 관리표 상세보기로 이동할까요?`);
+    const shouldMove = window.confirm(`${activeGroup.displayCode} (${getBedLabelList(groupBeds)}) (${plantNames}) 관리표 상세보기로 이동할까요?`);
     setHighlightGroupId(null);
     if (shouldMove && sheet) navigate(`/sheets/${sheet.id}`);
   }
