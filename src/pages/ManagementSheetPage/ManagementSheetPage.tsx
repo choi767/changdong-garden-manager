@@ -1082,7 +1082,14 @@ export default function ManagementSheetPage() {
               <div className={`plant-card ${pendingCultivation?.id === item.id ? "cultivation-card-locked" : ""}`} key={item.id}>
                 <div className="card-title-row">
                   <div>
-                    <strong>{item.plant ? `${sheetPlantName(item.id)}/${plantCategoryLabel[item.plant.category ?? "CROP"]}` : "삭제된 식물"}</strong>
+                    <strong className="sheet-plant-title">
+                      {item.plant ? (
+                        <>
+                          <span className="sheet-plant-name">{sheetPlantName(item.id)}</span>
+                          <span>/{plantCategoryLabel[item.plant.category ?? "CROP"]}</span>
+                        </>
+                      ) : "삭제된 식물"}
+                    </strong>
                     <p className={needsCultivationSave(item) ? "pending-text" : ""}>{cultivationSummary(item)}</p>
                   </div>
                   {sheet.status === "ACTIVE" && <button className="danger-button compact-action" type="button" onClick={() => void runConfirmed("이 식물을 관리표에서 해제하시겠습니까?", () => stopSheetPlant(item.id))}>삭제</button>}
