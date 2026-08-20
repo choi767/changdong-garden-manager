@@ -1092,6 +1092,11 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   flex-wrap: wrap;
   margin-top: 8px;
 }
+.record-photo-item {
+  display: grid;
+  grid-template-columns: 68px;
+  gap: 4px;
+}
 .record-photo-thumb-button {
   width: 68px;
   height: 52px;
@@ -1108,6 +1113,13 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.record-photo-delete-button {
+  min-height: 28px;
+  padding: 4px 5px;
+  border-radius: 6px;
+  font-size: 11px;
+  justify-content: center;
 }
 .plant-card button {
   justify-self: auto;

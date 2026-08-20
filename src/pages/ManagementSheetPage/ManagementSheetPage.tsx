@@ -145,7 +145,7 @@ function PhotoCard({ photo, plantName, onDelete, onPreview }: { photo: Photo; pl
   );
 }
 
-function RecordPhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (photo: Photo, url: string) => void }) {
+function RecordPhotoThumb({ photo, onPreview, onDelete }: { photo: Photo; onPreview: (photo: Photo, url: string) => void; onDelete: () => void }) {
   const [imageUrl, setImageUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
 
@@ -161,17 +161,20 @@ function RecordPhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (phot
   }, [photo.imageBlob, photo.thumbnailBlob]);
 
   return (
-    <button className="record-photo-thumb-button" type="button" onClick={() => onPreview(photo, imageUrl)} aria-label="사진 크게 보기">
-      {thumbnailUrl && <img src={thumbnailUrl} alt={photo.description || `${photo.photoDate} 사진`} />}
-    </button>
+    <div className="record-photo-item">
+      <button className="record-photo-thumb-button" type="button" onClick={() => onPreview(photo, imageUrl)} aria-label="사진 크게 보기">
+        {thumbnailUrl && <img src={thumbnailUrl} alt={photo.description || `${photo.photoDate} 사진`} />}
+      </button>
+      <button className="danger-button record-photo-delete-button" type="button" onClick={onDelete}>사진삭제</button>
+    </div>
   );
 }
 
-function RecordPhotoList({ photos, onPreview }: { photos: Photo[]; onPreview: (photo: Photo, url: string) => void }) {
+function RecordPhotoList({ photos, onPreview, onDelete }: { photos: Photo[]; onPreview: (photo: Photo, url: string) => void; onDelete: (photoId: string) => void }) {
   if (photos.length === 0) return null;
   return (
     <div className="record-photo-list">
-      {photos.map((photo) => <RecordPhotoThumb key={photo.id} photo={photo} onPreview={onPreview} />)}
+      {photos.map((photo) => <RecordPhotoThumb key={photo.id} photo={photo} onPreview={onPreview} onDelete={() => onDelete(photo.id)} />)}
     </div>
   );
 }
@@ -1378,7 +1381,7 @@ export default function ManagementSheetPage() {
                       <p>
                         {item.workDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
                       </p>
-                      <RecordPhotoList photos={photosForRecord("WORK", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
+                      <RecordPhotoList photos={photosForRecord("WORK", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                     </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDeleteWorkLog(item.id)}>삭제</button>
                   </div>
@@ -1438,7 +1441,7 @@ export default function ManagementSheetPage() {
               <div className="timeline-item" key={item.id}>
                 <div>
                   <p>{item.observedDate} · {sheetPlantName(item.managementSheetPlantId)}: {item.content}</p>
-                  <RecordPhotoList photos={photosForRecord("OBSERVATION", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
+                  <RecordPhotoList photos={photosForRecord("OBSERVATION", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                 </div>
                 <button className="danger-button compact-action" type="button" onClick={() => void onDeleteObservation(item.id)}>삭제</button>
               </div>
@@ -1507,7 +1510,7 @@ export default function ManagementSheetPage() {
               <div className="timeline-item" key={item.id}>
                 <div>
                   <p>{item.detectedDate} · {sheetPlantName(item.managementSheetPlantId)} · {item.pestType}({item.severity}): {item.symptom}{item.action ? ` / ${item.action}` : ""}</p>
-                  <RecordPhotoList photos={photosForRecord("PEST", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
+                  <RecordPhotoList photos={photosForRecord("PEST", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                 </div>
                 <button className="danger-button compact-action" type="button" onClick={() => void onDeletePestRecord(item.id)}>삭제</button>
               </div>
@@ -1705,7 +1708,7 @@ export default function ManagementSheetPage() {
                       {record.harvestDate} · {sheetPlantName(record.managementSheetPlantId)} · {record.quantity}{record.unit} · {record.quality}
                       {record.notes ? `: ${record.notes}` : ""}
                     </p>
-                    <RecordPhotoList photos={photosForRecord("HARVEST", record.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
+                    <RecordPhotoList photos={photosForRecord("HARVEST", record.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                   </div>
                   <button className="danger-button compact-action" type="button" onClick={() => void onDeleteHarvestRecord(record.id)}>삭제</button>
                 </div>
