@@ -464,6 +464,11 @@ h2 { font-size: 19px; }
   color: var(--ink);
   font-weight: 800;
 }
+.sheet-plant-category-select.is-placeholder,
+.sheet-plant-select.is-placeholder {
+  color: #7c8b80;
+  font-weight: 700;
+}
 .sheet-plant-category-select {
   min-width: 118px;
 }
@@ -922,7 +927,7 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 .info-grid.small { grid-template-columns: 90px 1fr; font-size: 14px; }
 .management-basic-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
   margin-top: 14px;
@@ -937,11 +942,6 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   color: var(--text);
   font-weight: 700;
 }
-.management-basic-form button {
-  min-height: 46px;
-  white-space: nowrap;
-}
-
 .selection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));

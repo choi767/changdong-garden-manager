@@ -218,7 +218,7 @@ export default function ManagementSheetPage() {
   const [selectedAddBeds, setSelectedAddBeds] = useState<string[]>([]);
   const [selectedRemoveBeds, setSelectedRemoveBeds] = useState<string[]>([]);
   const [plantId, setPlantId] = useState("");
-  const [plantAddCategory, setPlantAddCategory] = useState<PlantCategory>("CROP");
+  const [plantAddCategory, setPlantAddCategory] = useState<PlantCategory | "">("");
   const [pendingNewPlantId, setPendingNewPlantId] = useState("");
   const [workDate, setWorkDate] = useState(todayIsoDate());
   const [workPlantId, setWorkPlantId] = useState("");
@@ -351,7 +351,9 @@ export default function ManagementSheetPage() {
     .sort((a, b) => a.localeCompare(b, "ko-KR"));
   const addableBeds = data.beds.filter((bed) => bed.zoneId === group.zoneId && bed.status === "FALLOW" && bed.isActive);
   const activePlants = [...data.plants].sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
-  const filteredActivePlants = activePlants.filter((plant) => (plant.category ?? "CROP") === plantAddCategory);
+  const filteredActivePlants = plantAddCategory
+    ? activePlants.filter((plant) => (plant.category ?? "CROP") === plantAddCategory)
+    : [];
   const plantAddDisabled = sheetPlants.length >= MAX_SHEET_PLANTS || sheet.status !== "ACTIVE";
   const pendingNewPlant = activePlants.find((item) => item.id === pendingNewPlantId) ?? null;
   const pendingNewPlantDuplicateCount = pendingNewPlant ? sheetPlants.filter((item) => item.plantId === pendingNewPlant.id).length : 0;
@@ -1025,7 +1027,7 @@ export default function ManagementSheetPage() {
             <dt>현재 포함 틀</dt><dd>{getBedLabelList(currentBeds)}</dd>
             <dt>과거 포함 틀</dt><dd>{pastBeds.length ? getBedLabelList(pastBeds) : "없음"}</dd>
           </dl>
-          <form className="management-basic-form" onSubmit={onSaveManagementBasicInfo}>
+          <form id="management-basic-form" className="management-basic-form" onSubmit={onSaveManagementBasicInfo}>
             <label>
               관리 시작일
               <input type="date" value={managementStartDate} onChange={(event) => setManagementStartDate(event.target.value)} />
@@ -1038,12 +1040,12 @@ export default function ManagementSheetPage() {
                 <input value="- -" disabled readOnly />
               )}
             </label>
-            <button className="primary-button" type="submit">관리정보 저장</button>
           </form>
           {sheet.status === "ACTIVE" ? (
             <div className="button-row">
               <button className="secondary-button" type="button" onClick={() => setFrameModal("add")}>틀추가</button>
               <button className="secondary-button" type="button" onClick={() => setFrameModal("remove")}>틀삭제</button>
+              <button className="primary-button" type="submit" form="management-basic-form">관리정보 저장</button>
               <button className="danger-button" type="button" onClick={openCloseManagementModal}>관리 종료</button>
               <button className="danger-button" type="button" onClick={() => void runConfirmed("이 관리표를 완전삭제하시겠습니까?\n삭제하면 관리표, 관리그룹, 식물 연결, 작업이력, 수확기록이 함께 삭제됩니다.", async () => {
                 await deleteManagement(sheet.id);
@@ -1052,6 +1054,7 @@ export default function ManagementSheetPage() {
             </div>
           ) : (
             <div className="button-row">
+              <button className="primary-button" type="submit" form="management-basic-form">관리정보 저장</button>
               <button className="danger-button" type="button" onClick={() => void runConfirmed("이 관리표를 완전삭제하시겠습니까?\n삭제하면 관리표, 관리그룹, 식물 연결, 작업이력, 수확기록이 함께 삭제됩니다.", async () => {
                 await deleteManagement(sheet.id);
                 navigate("/");
@@ -1219,19 +1222,25 @@ export default function ManagementSheetPage() {
           </div>
           <form className="inline-form sheet-plant-add-form" onSubmit={onAddPlant}>
             <select
-              className="sheet-plant-category-select"
+              className={`sheet-plant-category-select ${plantAddCategory ? "" : "is-placeholder"}`}
               value={plantAddCategory}
               onChange={(event) => {
-                setPlantAddCategory(event.target.value as PlantCategory);
+                setPlantAddCategory(event.target.value as PlantCategory | "");
                 setPlantId("");
               }}
               disabled={plantAddDisabled || cultivationBlocksOtherActions}
               aria-label="식물 분류 선택"
             >
+              <option value="">추가식물 분류</option>
               {plantCategoryOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
-            <select className="sheet-plant-select" value={plantId} onChange={(event) => setPlantId(event.target.value)} disabled={plantAddDisabled || filteredActivePlants.length === 0 || cultivationBlocksOtherActions}>
-              <option value="">{plantCategoryLabel[plantAddCategory]} 선택</option>
+            <select
+              className={`sheet-plant-select ${plantId ? "" : "is-placeholder"}`}
+              value={plantId}
+              onChange={(event) => setPlantId(event.target.value)}
+              disabled={plantAddDisabled || !plantAddCategory || filteredActivePlants.length === 0 || cultivationBlocksOtherActions}
+            >
+              <option value="">추가식물 선택</option>
               {filteredActivePlants.map((plant) => <option key={plant.id} value={plant.id}>{plant.name}</option>)}
             </select>
             <button className="primary-button" type="submit" disabled={!plantId || plantAddDisabled || cultivationBlocksOtherActions}><Sprout size={18} /> 추가</button>
