@@ -457,6 +457,11 @@ h2 { font-size: 19px; }
 .sheet-plant-add-form {
   margin-top: 18px;
 }
+.sheet-plant-add-field {
+  min-width: 150px;
+  color: #7c8b80;
+  font-weight: 800;
+}
 .sheet-plant-category-select,
 .sheet-plant-select {
   border: 2px solid #1f4f35;
