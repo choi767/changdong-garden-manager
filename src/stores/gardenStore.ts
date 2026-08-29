@@ -416,7 +416,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     group.startDate = input.startDate;
     group.endDate = input.endDate;
     group.updatedAt = timestamp;
-    await persist(set, data, "관리 기본정보를 저장했습니다.");
+    await persist(set, data, "관리정보를 저장했습니다.");
   },
 
   async closeManagement(sheetId, endDate) {

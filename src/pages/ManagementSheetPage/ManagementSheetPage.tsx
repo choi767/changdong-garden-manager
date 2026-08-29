@@ -583,7 +583,7 @@ export default function ManagementSheetPage() {
       setError("시작일보다 이전 날짜는 입력할수 없습니다.");
       return;
     }
-    if (!window.confirm("관리 기본정보를 수정하시겠습니까?")) return;
+    if (!window.confirm("관리정보를 수정하시겠습니까?")) return;
     await run(() => updateManagementBasicInfo(activeSheet.id, { startDate: managementStartDate, endDate: nextEndDate }));
   }
 
@@ -1019,7 +1019,7 @@ export default function ManagementSheetPage() {
 
       <section className="dashboard-grid">
         <article className="panel">
-          <h2>관리 기본정보</h2>
+          <h2>관리정보</h2>
           <dl className="info-grid">
             <dt>Zone</dt><dd>Zone {group.zoneNumber}</dd>
             <dt>현재 포함 틀</dt><dd>{getBedLabelList(currentBeds)}</dd>
@@ -1038,7 +1038,7 @@ export default function ManagementSheetPage() {
                 <input value="- -" disabled readOnly />
               )}
             </label>
-            <button className="primary-button" type="submit">기본정보 저장</button>
+            <button className="primary-button" type="submit">관리정보 저장</button>
           </form>
           {sheet.status === "ACTIVE" ? (
             <div className="button-row">
@@ -1089,7 +1089,7 @@ export default function ManagementSheetPage() {
                   {sheet.status === "ACTIVE" && <button className="danger-button compact-action" type="button" onClick={() => void runConfirmed("이 식물을 관리표에서 해제하시겠습니까?", () => stopSheetPlant(item.id))}>삭제</button>}
                 </div>
                 <details className="db-details">
-                  <summary className="secondary-button db-toggle">기본정보 보기</summary>
+                  <summary className="secondary-button db-toggle">식물DB 보기</summary>
                   {item.plant ? (
                     <dl className="plant-db-info">
                       <dt>식물명</dt><dd>{item.plant.name}</dd>
