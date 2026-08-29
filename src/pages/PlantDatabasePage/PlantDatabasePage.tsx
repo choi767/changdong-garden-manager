@@ -396,18 +396,25 @@ export default function PlantDatabasePage() {
             </select>
           </label>
           <label>
-            파종시기(남부)
-            <textarea className="compact-textarea" value={form.plantingPeriod} onChange={(event) => patchForm("plantingPeriod", event.target.value)} placeholder="예: 4월초순" />
-          </label>
-          <label>
-            예상수확시기
-            <textarea className="compact-textarea" value={form.harvestPeriod} onChange={(event) => patchForm("harvestPeriod", event.target.value)} placeholder="예: 9월중순" />
+            덩굴식물여부
+            <select value={form.isVine ? "true" : "false"} onChange={(event) => patchForm("isVine", event.target.value === "true")}>
+              <option value="false">아님</option>
+              <option value="true">덩굴</option>
+            </select>
           </label>
           <label>
             일조조건
             <select value={form.sunlight} onChange={(event) => patchForm("sunlight", event.target.value as Sunlight)}>
               {Object.entries(sunlightLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
+          </label>
+          <label>
+            파종시기(남부)
+            <textarea className="compact-textarea" value={form.plantingPeriod} onChange={(event) => patchForm("plantingPeriod", event.target.value)} placeholder="예: 4월초순" />
+          </label>
+          <label>
+            예상수확시기
+            <textarea className="compact-textarea" value={form.harvestPeriod} onChange={(event) => patchForm("harvestPeriod", event.target.value)} placeholder="예: 9월중순" />
           </label>
           <label>
             물주기
@@ -424,13 +431,6 @@ export default function PlantDatabasePage() {
           <label>
             키(cm)
             <textarea className="compact-textarea" value={form.plantHeight} onChange={(event) => patchForm("plantHeight", event.target.value)} placeholder="예: 50" />
-          </label>
-          <label>
-            덩굴식물여부
-            <select value={form.isVine ? "true" : "false"} onChange={(event) => patchForm("isVine", event.target.value === "true")}>
-              <option value="false">아님</option>
-              <option value="true">덩굴</option>
-            </select>
           </label>
           <label>
             밑거름
