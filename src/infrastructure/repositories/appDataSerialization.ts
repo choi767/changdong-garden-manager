@@ -1,7 +1,7 @@
 import type { AppData, BackgroundImage, Photo } from "../../domain/entities/models";
 
 export const BACKUP_SCHEMA_VERSION = 1;
-export const APP_VERSION = "2.1.0";
+export const APP_VERSION = "1.2.0";
 
 export type SerializedPhoto = Omit<Photo, "imageBlob" | "thumbnailBlob"> & {
   imageBlobDataUrl: string;
