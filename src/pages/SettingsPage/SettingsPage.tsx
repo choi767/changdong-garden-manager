@@ -1,5 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Download, RefreshCcw, Trash2, Upload } from "lucide-react";
+import type { Plant, PlantCategory } from "../../domain/entities/models";
+import { sunlightLabel, type Sunlight } from "../../domain/enums/status";
 import { getSupabaseClient } from "../../infrastructure/supabaseClient";
 import { useGardenStore } from "../../stores/gardenStore";
 
@@ -9,11 +11,162 @@ function normalizeEmail(value: string | undefined): string {
   return (value ?? "").trim().toLocaleLowerCase("en-US");
 }
 
+const PLANT_EXCEL_COLUMNS = [
+  "식물ID",
+  "식물명",
+  "분류",
+  "파종시기(남부)",
+  "묘종식재시기(남부)",
+  "예상수확시기",
+  "일조조건",
+  "물주기",
+  "꽃피는시기",
+  "꽃색깔",
+  "키(cm)",
+  "덩굴식물여부",
+  "밑거름",
+  "추비",
+  "기타(특이사항)",
+  "최초등록일",
+  "최종수정일",
+  "등록자/수정자",
+  "사진데이터",
+  "사진형식",
+  "사진크기"
+] as const;
+
+const plantCategoryLabel: Record<PlantCategory, string> = {
+  CROP: "농작물",
+  FLOWER: "화초",
+  TREE: "나무"
+};
+
+function csvCell(value: string | number | boolean | null | undefined): string {
+  const text = String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  const source = text.replace(/^\uFEFF/, "");
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const next = source[index + 1];
+    if (quoted) {
+      if (char === '"' && next === '"') {
+        cell += '"';
+        index += 1;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        cell += char;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (char === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else if (char !== "\r") {
+      cell += char;
+    }
+  }
+  row.push(cell);
+  if (row.some((value) => value.trim())) rows.push(row);
+  return rows;
+}
+
+function exportPlantsCsv(plants: Plant[]): string {
+  const rows = [
+    PLANT_EXCEL_COLUMNS.join(","),
+    ...plants.map((plant) => [
+      plant.id,
+      plant.name,
+      plantCategoryLabel[plant.category ?? "CROP"],
+      plant.plantingPeriod,
+      plant.seedlingPlantingPeriod ?? "",
+      plant.harvestPeriod,
+      plant.sunlight ? sunlightLabel[plant.sunlight] : "미지정",
+      plant.watering,
+      plant.floweringPeriod,
+      plant.flowerColor,
+      plant.plantHeight,
+      plant.isVine ? "덩굴" : "아님",
+      plant.compoundFertilizer,
+      plant.topDressing,
+      plant.notes,
+      plant.createdAt,
+      plant.updatedAt,
+      plant.author,
+      plant.imageDataUrl,
+      plant.imageMimeType,
+      plant.imageFileSize
+    ].map(csvCell).join(","))
+  ];
+  return `\uFEFF${rows.join("\r\n")}`;
+}
+
+function categoryFromCsv(value: string): PlantCategory {
+  const text = value.trim().toLocaleLowerCase("ko-KR");
+  if (text === "flower" || text === "화초") return "FLOWER";
+  if (text === "tree" || text === "나무") return "TREE";
+  return "CROP";
+}
+
+function sunlightFromCsv(value: string): Sunlight {
+  const text = value.trim().toLocaleLowerCase("ko-KR");
+  if (text === "full" || text === "양지") return "FULL";
+  if (text === "partial" || text === "반양지") return "PARTIAL";
+  if (text === "shade" || text === "음지") return "SHADE";
+  return "UNKNOWN";
+}
+
+function parsePlantsCsv(text: string): Plant[] {
+  const rows = parseCsv(text);
+  if (rows.length < 2) throw new Error("식물DB 엑셀 백업 파일에 데이터가 없습니다.");
+  const headers = rows[0].map((value) => value.trim());
+  const get = (row: string[], name: typeof PLANT_EXCEL_COLUMNS[number]) => row[headers.indexOf(name)] ?? "";
+  return rows.slice(1).filter((row) => row.some((value) => value.trim())).map((row) => ({
+    id: get(row, "식물ID"),
+    name: get(row, "식물명"),
+    normalizedName: "",
+    category: categoryFromCsv(get(row, "분류")),
+    plantingPeriod: get(row, "파종시기(남부)"),
+    seedlingPlantingPeriod: get(row, "묘종식재시기(남부)"),
+    harvestPeriod: get(row, "예상수확시기"),
+    floweringPeriod: get(row, "꽃피는시기"),
+    flowerColor: get(row, "꽃색깔"),
+    plantHeight: get(row, "키(cm)"),
+    isVine: ["덩굴", "예", "yes", "true", "1"].includes(get(row, "덩굴식물여부").trim().toLocaleLowerCase("ko-KR")),
+    compoundFertilizer: get(row, "밑거름"),
+    oilCakeFertilizer: "",
+    specializedFertilizer: "",
+    topDressing: get(row, "추비"),
+    watering: get(row, "물주기"),
+    sunlight: sunlightFromCsv(get(row, "일조조건")),
+    notes: get(row, "기타(특이사항)"),
+    imageDataUrl: get(row, "사진데이터"),
+    imageMimeType: get(row, "사진형식"),
+    imageFileSize: Number(get(row, "사진크기")) || 0,
+    author: get(row, "등록자/수정자") || "사용자",
+    createdAt: get(row, "최초등록일"),
+    updatedAt: get(row, "최종수정일")
+  }));
+}
+
 export default function SettingsPage() {
   const data = useGardenStore((state) => state.data);
   const updateBedLayout = useGardenStore((state) => state.updateBedLayout);
   const resetData = useGardenStore((state) => state.resetData);
   const deleteAllPlants = useGardenStore((state) => state.deleteAllPlants);
+  const replacePlants = useGardenStore((state) => state.replacePlants);
   const exportJson = useGardenStore((state) => state.exportJson);
   const importJson = useGardenStore((state) => state.importJson);
   const [bedId, setBedId] = useState("");
@@ -100,6 +253,17 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url);
   }
 
+  function onExportPlantsExcel() {
+    const csv = exportPlantsCsv(appData.plants);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `changdong-plant-db-v2.2-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function onImport(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -113,6 +277,28 @@ export default function SettingsPage() {
       await importJson(await file.text());
     } catch (err) {
       setError(err instanceof Error ? err.message : "백업 가져오기에 실패했습니다.");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  async function onImportPlantsExcel(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setError("");
+    if (!isAdmin) {
+      setError("관리자만 엑셀복원(식물DB)을 실행할 수 있습니다.");
+      event.target.value = "";
+      return;
+    }
+    if (!window.confirm("식물DB를 엑셀 백업 파일 내용으로 복원하시겠습니까?\n기존 식물DB가 백업 파일 내용으로 교체됩니다.")) {
+      event.target.value = "";
+      return;
+    }
+    try {
+      await replacePlants(parsePlantsCsv(await file.text()));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "식물DB 엑셀 복원에 실패했습니다.");
     } finally {
       event.target.value = "";
     }
@@ -168,21 +354,26 @@ export default function SettingsPage() {
         <article className="panel">
           <h2>백업 / 복원</h2>
           <div className="button-row">
-            <button className="primary-button" type="button" onClick={() => void onExport()}><Download size={18} /> JSON 백업</button>
+            <button className="primary-button" type="button" onClick={() => void onExport()}><Download size={18} /> JSON 백업(전체)</button>
+            <button className="secondary-button" type="button" onClick={onExportPlantsExcel}><Download size={18} /> 엑셀백업(식물DB)</button>
           </div>
           <label className="admin-toggle">
             <input type="checkbox" checked={showAdminTools && isAdmin} disabled={!isAdmin} onChange={(event) => setShowAdminTools(event.target.checked)} />
             관리자 기능 보기
           </label>
-          <p className={isAdmin ? "hint" : "admin-warning"}>{isAdmin ? `관리자 계정: ${userEmail}` : "관리자 계정으로 로그인해야 JSON 복원/초기화/전체삭제를 실행할 수 있습니다."}</p>
+          <p className={isAdmin ? "hint" : "admin-warning"}>{isAdmin ? `관리자 계정: ${userEmail}` : "관리자 계정으로 로그인해야 복원/초기화/전체삭제를 실행할 수 있습니다."}</p>
           {showAdminTools && isAdmin && (
             <div className="admin-tools">
               <label className="secondary-button file-button">
-                <Upload size={18} /> JSON 복원
+                <Upload size={18} /> JSON 복원(전체)
                 <input type="file" accept="application/json" onChange={(event) => void onImport(event)} />
               </label>
-              <button className="danger-button" type="button" onClick={() => void onResetDevelopmentData()}><RefreshCcw size={18} /> 개발용 초기화</button>
+              <label className="secondary-button file-button">
+                <Upload size={18} /> 엑셀복원(식물DB)
+                <input type="file" accept=".csv,text/csv" onChange={(event) => void onImportPlantsExcel(event)} />
+              </label>
               <button className="danger-button" type="button" onClick={() => void onDeleteAllPlants()}><Trash2 size={18} /> 식물DB 전체삭제</button>
+              <button className="danger-button" type="button" onClick={() => void onResetDevelopmentData()}><RefreshCcw size={18} /> 개발용 초기화</button>
             </div>
           )}
         </article>

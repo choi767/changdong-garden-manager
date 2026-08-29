@@ -85,6 +85,7 @@ interface GardenState {
   addPlant: (input: PlantFormInput) => Promise<void>;
   updatePlant: (plantId: string, input: PlantFormInput) => Promise<void>;
   deletePlant: (plantId: string) => Promise<void>;
+  replacePlants: (plants: Plant[]) => Promise<void>;
   addPlantToSheet: (sheetId: string, plantId: string) => Promise<void>;
   addPlantToSheetWithCultivation: (sheetId: string, plantId: string, input: SheetPlantFormInput) => Promise<void>;
   updateSheetPlant: (sheetPlantId: string, input: SheetPlantFormInput) => Promise<void>;
@@ -543,6 +544,45 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     if (!plant) throw new Error("존재하지 않는 식물입니다.");
     data.plants = data.plants.filter((item) => item.id !== plantId);
     await persist(set, data, "삭제했습니다");
+  },
+
+  async replacePlants(plants) {
+    const data = requireData(get().data);
+    const normalizedNames = new Set<string>();
+    const timestamp = nowIso();
+    data.plants = plants.map((plant) => {
+      const normalizedName = normalizePlantName(plant.name);
+      if (!normalizedName) throw new Error("식물명은 필수입니다.");
+      if (normalizedNames.has(normalizedName)) throw new Error(`중복된 식물명이 있습니다: ${plant.name}`);
+      normalizedNames.add(normalizedName);
+      return {
+        ...plant,
+        id: plant.id || makeId("plant"),
+        normalizedName,
+        category: plant.category ?? "CROP",
+        plantingPeriod: plant.plantingPeriod ?? "",
+        seedlingPlantingPeriod: plant.seedlingPlantingPeriod ?? "",
+        harvestPeriod: plant.harvestPeriod ?? "",
+        floweringPeriod: plant.floweringPeriod ?? "",
+        flowerColor: plant.flowerColor ?? "",
+        plantHeight: plant.plantHeight ?? "",
+        isVine: plant.isVine ?? false,
+        compoundFertilizer: plant.compoundFertilizer ?? "",
+        oilCakeFertilizer: "",
+        specializedFertilizer: "",
+        topDressing: plant.topDressing ?? "",
+        watering: plant.watering ?? "",
+        sunlight: plant.sunlight ?? "UNKNOWN",
+        notes: plant.notes ?? "",
+        imageDataUrl: plant.imageDataUrl ?? "",
+        imageMimeType: plant.imageMimeType ?? "",
+        imageFileSize: plant.imageFileSize ?? 0,
+        author: plant.author || "사용자",
+        createdAt: plant.createdAt || timestamp,
+        updatedAt: timestamp
+      };
+    });
+    await persist(set, data, "식물DB를 복원했습니다.");
   },
 
   async addPlantToSheet(sheetId, plantId) {
