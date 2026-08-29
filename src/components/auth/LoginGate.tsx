@@ -50,7 +50,7 @@ export default function LoginGate({ children }: LoginGateProps) {
   return (
     <div className="login-page">
       <form className="login-panel" onSubmit={onSubmit}>
-        <p className="eyebrow">창동 틀밭관리 V2.2</p>
+        <p className="eyebrow">창동 틀밭관리 V2.3</p>
         <h1>로그인</h1>
         <label>
           이메일

@@ -249,7 +249,7 @@ export default function SettingsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `changdong-garden-v2.2-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `changdong-garden-v2.3-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -260,7 +260,7 @@ export default function SettingsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `changdong-plant-db-v2.2-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `changdong-plant-db-v2.3-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
