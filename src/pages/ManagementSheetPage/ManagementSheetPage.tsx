@@ -10,7 +10,7 @@ import { MAX_SHEET_PLANTS } from "../../domain/services/plantRules";
 import { todayIsoDate } from "../../utils/id";
 import { useGardenStore } from "../../stores/gardenStore";
 
-const WORK_TYPE_OPTIONS = ["정식전 비료/거름", "정식후 추비", "심기(정식)", "잡초제거", "방제", "물주기", "지지대 설치", "줄로묶어주기", "가지치기", "솎아내기", "흙 보충", "직접입력", "기타"];
+const WORK_TYPE_OPTIONS = ["가지치기", "기타", "미생물", "물주기", "방제(살충/살균제)", "솎아내기", "심기(정식)", "잡초제거", "정식전 비료/거름", "줄로묶어주기", "지지대 설치", "직접입력", "추비", "토양 살충/살균", "흙 보충"];
 const PHOTO_MAX_SIDE = 1280;
 type WorkRepeatUnit = "NONE" | "DAYS" | "WEEKS";
 const plantCategoryLabel: Record<PlantCategory, string> = {
