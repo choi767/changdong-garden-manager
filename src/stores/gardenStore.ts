@@ -36,6 +36,7 @@ type PlantFormInput = Pick<
   | "floweringPeriod"
   | "flowerColor"
   | "plantHeight"
+  | "isVine"
   | "compoundFertilizer"
   | "oilCakeFertilizer"
   | "specializedFertilizer"
@@ -121,6 +122,7 @@ function withDefaults(data: AppData): AppData {
     floweringPeriod: plant.floweringPeriod ?? "",
     flowerColor: plant.flowerColor ?? "",
     plantHeight: plant.plantHeight ?? "",
+    isVine: plant.isVine ?? false,
     imageDataUrl: plant.imageDataUrl ?? "",
     imageMimeType: plant.imageMimeType ?? "",
     imageFileSize: plant.imageFileSize ?? 0
@@ -495,6 +497,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       floweringPeriod: input.floweringPeriod,
       flowerColor: input.flowerColor,
       plantHeight: input.plantHeight,
+      isVine: input.isVine,
       compoundFertilizer: input.compoundFertilizer,
       oilCakeFertilizer: input.oilCakeFertilizer,
       specializedFertilizer: input.specializedFertilizer,

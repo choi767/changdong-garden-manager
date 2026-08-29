@@ -13,6 +13,7 @@ interface PlantFormState {
   floweringPeriod: string;
   flowerColor: string;
   plantHeight: string;
+  isVine: boolean;
   compoundFertilizer: string;
   oilCakeFertilizer: string;
   specializedFertilizer: string;
@@ -38,6 +39,7 @@ const emptyForm: PlantFormState = {
   floweringPeriod: "",
   flowerColor: "",
   plantHeight: "",
+  isVine: false,
   compoundFertilizer: "",
   oilCakeFertilizer: "",
   specializedFertilizer: "",
@@ -67,6 +69,7 @@ function toForm(plant: Plant): PlantFormState {
     floweringPeriod: plant.floweringPeriod ?? "",
     flowerColor: plant.flowerColor ?? "",
     plantHeight: plant.plantHeight ?? "",
+    isVine: plant.isVine ?? false,
     compoundFertilizer: plant.compoundFertilizer,
     oilCakeFertilizer: plant.oilCakeFertilizer,
     specializedFertilizer: plant.specializedFertilizer,
@@ -225,12 +228,17 @@ export default function PlantDatabasePage() {
     event.preventDefault();
     setError("");
     const savedCategory = form.category;
+    const payload = {
+      ...form,
+      oilCakeFertilizer: "",
+      specializedFertilizer: ""
+    };
     try {
       if (editingId) {
         if (!window.confirm("식물 정보를 수정하시겠습니까?")) return;
-        await updatePlant(editingId, form);
+        await updatePlant(editingId, payload);
       } else {
-        await addPlant(form);
+        await addPlant(payload);
       }
       setSelectedCategory(savedCategory);
       setSearchText("");
@@ -283,24 +291,25 @@ export default function PlantDatabasePage() {
               </div>
             </div>
             <dl className="info-grid small">
-              <dt>파종</dt><dd>{plant.plantingPeriod || "미지정"}</dd>
+              <dt>식물명</dt><dd>{plant.name}</dd>
               <dt>분류</dt><dd>{plantCategoryLabel[plant.category ?? "CROP"]}</dd>
-              <dt>수확</dt><dd>{plant.harvestPeriod || "미지정"}</dd>
-              <dt>일조</dt><dd>{sunlightLabel[plant.sunlight]}</dd>
+              <dt>파종시기(남부)</dt><dd>{plant.plantingPeriod || "미지정"}</dd>
+              <dt>예상수확시기</dt><dd>{plant.harvestPeriod || "미지정"}</dd>
+              <dt>일조조건</dt><dd>{sunlightLabel[plant.sunlight]}</dd>
+              <dt>물주기</dt><dd>{plant.watering || "미지정"}</dd>
               <dt>꽃피는 시기</dt><dd>{plant.floweringPeriod || "미지정"}</dd>
               <dt>꽃 색깔</dt><dd>{plant.flowerColor || "미지정"}</dd>
-              <dt>키</dt><dd>{plant.plantHeight || "미지정"}</dd>
-              <dt>물주기</dt><dd>{plant.watering || "미지정"}</dd>
-              <dt>수정자</dt><dd>{plant.author || "사용자"}</dd>
-              <dt>수정일</dt><dd>{plant.updatedAt.slice(0, 10)}</dd>
+              <dt>키(cm)</dt><dd>{plant.plantHeight || "미지정"}</dd>
+              <dt>덩굴식물여부</dt><dd>{plant.isVine ? "덩굴" : "아님"}</dd>
+              <dt>밑거름</dt><dd>{plant.compoundFertilizer || "미지정"}</dd>
+              <dt>추비</dt><dd>{plant.topDressing || "미지정"}</dd>
+              <dt>최초등록일</dt><dd>{plant.createdAt.slice(0, 10)}</dd>
+              <dt>최종수정일</dt><dd>{plant.updatedAt.slice(0, 10)}</dd>
+              <dt>등록자/수정자</dt><dd>{plant.author || "사용자"}</dd>
             </dl>
             <details className="db-details">
-              <summary className="secondary-button db-toggle">거름/메모 보기</summary>
-              <p>복합비료: {plant.compoundFertilizer || "미지정"}</p>
-              <p>유박: {plant.oilCakeFertilizer || "미지정"}</p>
-              <p>특화비료: {plant.specializedFertilizer || "미지정"}</p>
-              <p>추비: {plant.topDressing || "미지정"}</p>
-              <p>기타: {plant.notes || "미지정"}</p>
+              <summary className="secondary-button db-toggle">기타 보기</summary>
+              <p>기타(특이사항): {plant.notes || "미지정"}</p>
             </details>
             <details className="db-details">
               <summary className="secondary-button db-toggle">사진보기</summary>
@@ -384,64 +393,67 @@ export default function PlantDatabasePage() {
             <input value={form.name} onKeyDown={preventEnterSubmit} onChange={(event) => patchForm("name", event.target.value)} placeholder="예: 토마토" />
           </label>
           <label>
-            식물 분류 *
+            분류 *
             <select value={form.category} onChange={(event) => patchForm("category", event.target.value as PlantCategory)}>
               {Object.entries(plantCategoryLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
           <label>
-            최종 수정자 *
-            <input value={form.author} onKeyDown={preventEnterSubmit} onChange={(event) => patchForm("author", event.target.value)} placeholder="예: 홍길동" />
+            파종시기(남부)
+            <textarea className="compact-textarea" value={form.plantingPeriod} onChange={(event) => patchForm("plantingPeriod", event.target.value)} placeholder="예: 4월초순" />
           </label>
           <label>
-            파종 시기
-            <textarea className="compact-textarea" value={form.plantingPeriod} onChange={(event) => patchForm("plantingPeriod", event.target.value)} placeholder="예: 4월~5월" />
+            예상수확시기
+            <textarea className="compact-textarea" value={form.harvestPeriod} onChange={(event) => patchForm("harvestPeriod", event.target.value)} placeholder="예: 9월중순" />
           </label>
           <label>
-            수확 시기
-            <textarea className="compact-textarea" value={form.harvestPeriod} onChange={(event) => patchForm("harvestPeriod", event.target.value)} placeholder="예: 7월~9월" />
-          </label>
-          <label>
-            일조 조건
+            일조조건
             <select value={form.sunlight} onChange={(event) => patchForm("sunlight", event.target.value as Sunlight)}>
               {Object.entries(sunlightLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
           <label>
+            물주기
+            <textarea className="compact-textarea" value={form.watering} onChange={(event) => patchForm("watering", event.target.value)} placeholder="예: 모종식재후 물 자주, 수확전 물자주" />
+          </label>
+          <label>
             꽃피는 시기
-            <textarea className="compact-textarea" value={form.floweringPeriod} onChange={(event) => patchForm("floweringPeriod", event.target.value)} placeholder="예: 4월~6월" />
+            <textarea className="compact-textarea" value={form.floweringPeriod} onChange={(event) => patchForm("floweringPeriod", event.target.value)} placeholder="예: 5월하순" />
           </label>
           <label>
             꽃 색깔
-            <textarea className="compact-textarea" value={form.flowerColor} onChange={(event) => patchForm("flowerColor", event.target.value)} placeholder="예: 노랑, 흰색" />
+            <textarea className="compact-textarea" value={form.flowerColor} onChange={(event) => patchForm("flowerColor", event.target.value)} placeholder="예: 핑크" />
           </label>
           <label>
-            키
-            <textarea className="compact-textarea" value={form.plantHeight} onChange={(event) => patchForm("plantHeight", event.target.value)} placeholder="예: 30~60cm" />
+            키(cm)
+            <textarea className="compact-textarea" value={form.plantHeight} onChange={(event) => patchForm("plantHeight", event.target.value)} placeholder="예: 50" />
           </label>
           <label>
-            거름/복합비료
-            <textarea className="compact-textarea" value={form.compoundFertilizer} onChange={(event) => patchForm("compoundFertilizer", event.target.value)} />
+            덩굴식물여부
+            <select value={form.isVine ? "true" : "false"} onChange={(event) => patchForm("isVine", event.target.value === "true")}>
+              <option value="false">아님</option>
+              <option value="true">덩굴</option>
+            </select>
           </label>
           <label>
-            거름/유박
-            <textarea className="compact-textarea" value={form.oilCakeFertilizer} onChange={(event) => patchForm("oilCakeFertilizer", event.target.value)} />
-          </label>
-          <label>
-            거름/특화비료
-            <textarea className="compact-textarea" value={form.specializedFertilizer} onChange={(event) => patchForm("specializedFertilizer", event.target.value)} />
+            밑거름
+            <textarea className="compact-textarea" value={form.compoundFertilizer} onChange={(event) => patchForm("compoundFertilizer", event.target.value)} placeholder="예: 식재전 복합비료" />
           </label>
           <label>
             추비
-            <textarea className="compact-textarea" value={form.topDressing} onChange={(event) => patchForm("topDressing", event.target.value)} />
-          </label>
-          <label>
-            물주기
-            <textarea className="compact-textarea" value={form.watering} onChange={(event) => patchForm("watering", event.target.value)} />
+            <textarea className="compact-textarea" value={form.topDressing} onChange={(event) => patchForm("topDressing", event.target.value)} placeholder="예: 칼슘" />
           </label>
           <label className="span-2">
-            기타
+            기타(특이사항)
             <textarea value={form.notes} onChange={(event) => patchForm("notes", event.target.value)} />
+          </label>
+          <div className="span-2 plant-form-meta">
+            <div><span>최초등록일</span><strong>{editingPlant ? editingPlant.createdAt.slice(0, 10) : "등록하면 자동 기록"}</strong></div>
+            <div><span>최종수정일</span><strong>{editingPlant ? editingPlant.updatedAt.slice(0, 10) : "등록/수정하면 자동 기록"}</strong></div>
+          </div>
+          <label className="span-2">
+            등록자/수정자 *
+            <input value={form.author} onKeyDown={preventEnterSubmit} onChange={(event) => patchForm("author", event.target.value)} placeholder="예: 홍길동" />
           </label>
           <div className="span-2 plant-photo-field">
             <label className="plant-photo-upload-label">

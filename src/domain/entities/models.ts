@@ -68,6 +68,7 @@ export interface Plant {
   floweringPeriod: string;
   flowerColor: string;
   plantHeight: string;
+  isVine: boolean;
   compoundFertilizer: string;
   oilCakeFertilizer: string;
   specializedFertilizer: string;

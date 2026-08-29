@@ -33,7 +33,7 @@ describe("창동 틀밭관리 V2.2 업무 규칙", () => {
       { id: "sp_1", managementSheetId: sheetId, plantId: "p_1", plantedDate: "2026-08-01", plantingMethod: "SEEDLING" as const, expectedHarvestPeriod: "", finalHarvestDate: "", cultivationStatus: "GROWING" as const, notes: "", isActive: true, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "" },
       { id: "sp_2", managementSheetId: sheetId, plantId: "p_1", plantedDate: "2026-08-10", plantingMethod: "SEED" as const, expectedHarvestPeriod: "", finalHarvestDate: "", cultivationStatus: "GROWING" as const, notes: "", isActive: true, createdAt: "2026-08-02T00:00:00.000Z", updatedAt: "" }
     ];
-    const displayNames = makeSheetPlantDisplayNameMap(sheetPlants.map((item) => ({ ...item, plant: { id: "p_1", name: "배추", normalizedName: "배추", category: "CROP" as const, plantingPeriod: "", harvestPeriod: "", floweringPeriod: "", flowerColor: "", plantHeight: "", compoundFertilizer: "", oilCakeFertilizer: "", specializedFertilizer: "", topDressing: "", watering: "", sunlight: "UNKNOWN" as const, notes: "", imageDataUrl: "", imageMimeType: "", imageFileSize: 0, author: "", createdAt: "", updatedAt: "" } })));
+    const displayNames = makeSheetPlantDisplayNameMap(sheetPlants.map((item) => ({ ...item, plant: { id: "p_1", name: "배추", normalizedName: "배추", category: "CROP" as const, plantingPeriod: "", harvestPeriod: "", floweringPeriod: "", flowerColor: "", plantHeight: "", isVine: false, compoundFertilizer: "", oilCakeFertilizer: "", specializedFertilizer: "", topDressing: "", watering: "", sunlight: "UNKNOWN" as const, notes: "", imageDataUrl: "", imageMimeType: "", imageFileSize: 0, author: "", createdAt: "", updatedAt: "" } })));
     expect(validateAddSheetPlant(sheetPlants, sheetId, "p_1")).toBeNull();
     expect(displayNames.get("sp_1")).toBe("배추");
     expect(displayNames.get("sp_2")).toBe("배추(추가1)");
@@ -41,7 +41,7 @@ describe("창동 틀밭관리 V2.2 업무 규칙", () => {
 
   it("식물명은 공백 차이를 무시하고 중복을 막는다", () => {
     const data = createInitialData();
-    data.plants.push({ id: "plant_1", name: "상추", normalizedName: "상추", category: "CROP", plantingPeriod: "", harvestPeriod: "", floweringPeriod: "", flowerColor: "", plantHeight: "", compoundFertilizer: "", oilCakeFertilizer: "", specializedFertilizer: "", topDressing: "", watering: "", sunlight: "UNKNOWN", notes: "", imageDataUrl: "", imageMimeType: "", imageFileSize: 0, author: "사용자", createdAt: "", updatedAt: "" });
+    data.plants.push({ id: "plant_1", name: "상추", normalizedName: "상추", category: "CROP", plantingPeriod: "", harvestPeriod: "", floweringPeriod: "", flowerColor: "", plantHeight: "", isVine: false, compoundFertilizer: "", oilCakeFertilizer: "", specializedFertilizer: "", topDressing: "", watering: "", sunlight: "UNKNOWN", notes: "", imageDataUrl: "", imageMimeType: "", imageFileSize: 0, author: "사용자", createdAt: "", updatedAt: "" });
     expect(validateNewPlantName(data.plants, "상 추")).toBe("동일한 식물명이 이미 등록되어 있습니다.");
   });
 

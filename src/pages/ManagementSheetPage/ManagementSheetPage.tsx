@@ -1094,21 +1094,20 @@ export default function ManagementSheetPage() {
                     <dl className="plant-db-info">
                       <dt>식물명</dt><dd>{item.plant.name}</dd>
                       <dt>분류</dt><dd>{plantCategoryLabel[item.plant.category ?? "CROP"]}</dd>
-                      <dt>파종 시기</dt><dd>{item.plant.plantingPeriod || "미지정"}</dd>
-                      <dt>수확 시기</dt><dd>{item.plant.harvestPeriod || "미지정"}</dd>
-                      <dt>일조 조건</dt><dd>{sunlightLabel[item.plant.sunlight]}</dd>
+                      <dt>파종시기(남부)</dt><dd>{item.plant.plantingPeriod || "미지정"}</dd>
+                      <dt>예상수확시기</dt><dd>{item.plant.harvestPeriod || "미지정"}</dd>
+                      <dt>일조조건</dt><dd>{sunlightLabel[item.plant.sunlight]}</dd>
+                      <dt>물주기</dt><dd>{item.plant.watering || "미지정"}</dd>
                       <dt>꽃피는 시기</dt><dd>{item.plant.floweringPeriod || "미지정"}</dd>
                       <dt>꽃 색깔</dt><dd>{item.plant.flowerColor || "미지정"}</dd>
-                      <dt>키</dt><dd>{item.plant.plantHeight || "미지정"}</dd>
-                      <dt>거름/복합비료</dt><dd>{item.plant.compoundFertilizer || "미지정"}</dd>
-                      <dt>거름/유박</dt><dd>{item.plant.oilCakeFertilizer || "미지정"}</dd>
-                      <dt>거름/특화비료</dt><dd>{item.plant.specializedFertilizer || "미지정"}</dd>
+                      <dt>키(cm)</dt><dd>{item.plant.plantHeight || "미지정"}</dd>
+                      <dt>덩굴식물여부</dt><dd>{item.plant.isVine ? "덩굴" : "아님"}</dd>
+                      <dt>밑거름</dt><dd>{item.plant.compoundFertilizer || "미지정"}</dd>
                       <dt>추비</dt><dd>{item.plant.topDressing || "미지정"}</dd>
-                      <dt>물주기</dt><dd>{item.plant.watering || "미지정"}</dd>
-                      <dt>기타</dt><dd>{item.plant.notes || "미지정"}</dd>
-                      <dt>최종 수정자</dt><dd>{item.plant.author || "사용자"}</dd>
+                      <dt>기타(특이사항)</dt><dd>{item.plant.notes || "미지정"}</dd>
                       <dt>최초 등록일</dt><dd>{item.plant.createdAt.slice(0, 10)}</dd>
                       <dt>최종 수정일</dt><dd>{item.plant.updatedAt.slice(0, 10)}</dd>
+                      <dt>등록자/수정자</dt><dd>{item.plant.author || "사용자"}</dd>
                     </dl>
                   ) : (
                     <p className="plant-db-info missing">식물 DB에서 삭제된 식물입니다.</p>
