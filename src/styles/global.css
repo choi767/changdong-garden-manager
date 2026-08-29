@@ -947,6 +947,9 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   color: var(--text);
   font-weight: 700;
 }
+.management-basic-form + .button-row {
+  margin-top: 16px;
+}
 .selection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
