@@ -36,7 +36,18 @@ function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: numb
   });
 }
 
-async function resizeImage(file: File, maxSide: number, quality: number): Promise<Blob> {
+function resizeLoadedImage(image: HTMLImageElement, maxSide: number, quality: number): Promise<Blob> {
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("사진 처리 기능을 사용할 수 없습니다.");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvasToBlob(canvas, "image/jpeg", quality);
+}
+
+async function compressPhoto(file: File): Promise<{ imageBlob: Blob; thumbnailBlob: Blob; mimeType: string; fileSize: number }> {
   const imageUrl = URL.createObjectURL(file);
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -45,28 +56,19 @@ async function resizeImage(file: File, maxSide: number, quality: number): Promis
       img.onerror = () => reject(new Error("사진 파일을 읽지 못했습니다."));
       img.src = imageUrl;
     });
-    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("사진 처리 기능을 사용할 수 없습니다.");
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return canvasToBlob(canvas, "image/jpeg", quality);
+    const [imageBlob, thumbnailBlob] = await Promise.all([
+      resizeLoadedImage(image, PHOTO_MAX_SIDE, PHOTO_QUALITY),
+      resizeLoadedImage(image, THUMBNAIL_MAX_SIDE, THUMBNAIL_QUALITY)
+    ]);
+    return {
+      imageBlob,
+      thumbnailBlob,
+      mimeType: "image/jpeg",
+      fileSize: imageBlob.size + thumbnailBlob.size
+    };
   } finally {
     URL.revokeObjectURL(imageUrl);
   }
-}
-
-async function compressPhoto(file: File): Promise<{ imageBlob: Blob; thumbnailBlob: Blob; mimeType: string; fileSize: number }> {
-  const imageBlob = await resizeImage(file, PHOTO_MAX_SIDE, PHOTO_QUALITY);
-  const thumbnailBlob = await resizeImage(file, THUMBNAIL_MAX_SIDE, THUMBNAIL_QUALITY);
-  return {
-    imageBlob,
-    thumbnailBlob,
-    mimeType: "image/jpeg",
-    fileSize: imageBlob.size + thumbnailBlob.size
-  };
 }
 
 function formatFileSize(bytes: number): string {
@@ -645,33 +647,27 @@ export default function ManagementSheetPage() {
     }
     await run(async () => {
       const managementSheetPlantId = optionalLinkedPlantId(observationPlantId) || null;
-      const memo = await addObservationMemo({
-        managementSheetId: activeSheet.id,
-        managementSheetPlantId,
-        observedDate: observationDate,
-        content: resolvedContent
-      });
-      if (recordPhotoFiles.observation) {
-        setRecordPhotoSaving("observation");
-        try {
-          await savePhotoFile(recordPhotoFiles.observation, {
-            managementSheetPlantId,
+      if (recordPhotoFiles.observation) setRecordPhotoSaving("observation");
+      try {
+        const attachedPhoto = recordPhotoFiles.observation
+          ? await prepareAttachedPhoto(recordPhotoFiles.observation, {
             photoDate: observationDate,
-            description: `관찰기록: ${resolvedContent}`,
-            recordType: "OBSERVATION",
-            recordId: memo.id
-          });
-        } catch (err) {
-          setError(err instanceof Error ? `관찰기록은 저장됐지만 사진 저장에 실패했습니다: ${err.message}` : "관찰기록은 저장됐지만 사진 저장에 실패했습니다.");
-        } finally {
-          setRecordPhotoSaving("");
-        }
+            description: `관찰기록: ${resolvedContent}`
+          })
+          : undefined;
+        await addObservationMemo({
+          managementSheetId: activeSheet.id,
+          managementSheetPlantId,
+          observedDate: observationDate,
+          content: resolvedContent
+        }, attachedPhoto);
+      } finally {
+        setRecordPhotoSaving("");
       }
       setObservationDate(todayIsoDate());
       setObservationPlantId("");
       setObservationContent("");
       clearRecordPhoto("observation");
-      setRecordPhotoSaving("");
     });
   }
 
@@ -690,30 +686,25 @@ export default function ManagementSheetPage() {
     }
     await run(async () => {
       const managementSheetPlantId = optionalLinkedPlantId(pestPlantId) || null;
-      const record = await addPestRecord({
-        managementSheetId: activeSheet.id,
-        managementSheetPlantId,
-        detectedDate: pestDate,
-        pestType: resolvedPestType || "미지정",
-        severity: pestSeverity,
-        symptom: resolvedPestSymptom,
-        action: pestAction
-      });
-      if (recordPhotoFiles.pest) {
-        setRecordPhotoSaving("pest");
-        try {
-          await savePhotoFile(recordPhotoFiles.pest, {
-            managementSheetPlantId,
+      if (recordPhotoFiles.pest) setRecordPhotoSaving("pest");
+      try {
+        const attachedPhoto = recordPhotoFiles.pest
+          ? await prepareAttachedPhoto(recordPhotoFiles.pest, {
             photoDate: pestDate,
-            description: ["병해충기록", resolvedPestType || "미지정", resolvedPestSymptom, pestAction.trim()].filter(Boolean).join(": "),
-            recordType: "PEST",
-            recordId: record.id
-          });
-        } catch (err) {
-          setError(err instanceof Error ? `병해충기록은 저장됐지만 사진 저장에 실패했습니다: ${err.message}` : "병해충기록은 저장됐지만 사진 저장에 실패했습니다.");
-        } finally {
-          setRecordPhotoSaving("");
-        }
+            description: ["병해충기록", resolvedPestType || "미지정", resolvedPestSymptom, pestAction.trim()].filter(Boolean).join(": ")
+          })
+          : undefined;
+        await addPestRecord({
+          managementSheetId: activeSheet.id,
+          managementSheetPlantId,
+          detectedDate: pestDate,
+          pestType: resolvedPestType || "미지정",
+          severity: pestSeverity,
+          symptom: resolvedPestSymptom,
+          action: pestAction
+        }, attachedPhoto);
+      } finally {
+        setRecordPhotoSaving("");
       }
       setPestDate(todayIsoDate());
       setPestPlantId("");
@@ -722,7 +713,6 @@ export default function ManagementSheetPage() {
       setPestSymptom("");
       setPestAction("");
       clearRecordPhoto("pest");
-      setRecordPhotoSaving("");
     });
   }
 
@@ -825,30 +815,25 @@ export default function ManagementSheetPage() {
       return;
     }
     await run(async () => {
-      const record = await addHarvestRecord({
-        managementSheetId: activeSheet.id,
-        managementSheetPlantId: harvestPlantId,
-        harvestDate,
-        quantity,
-        unit: harvestUnit,
-        quality: harvestQuality,
-        notes: harvestNotes
-      });
-      if (recordPhotoFiles.harvest) {
-        setRecordPhotoSaving("harvest");
-        try {
-          await savePhotoFile(recordPhotoFiles.harvest, {
-            managementSheetPlantId: harvestPlantId,
+      if (recordPhotoFiles.harvest) setRecordPhotoSaving("harvest");
+      try {
+        const attachedPhoto = recordPhotoFiles.harvest
+          ? await prepareAttachedPhoto(recordPhotoFiles.harvest, {
             photoDate: harvestDate,
-            description: ["수확기록", sheetPlantName(harvestPlantId), `${harvestQty}${harvestUnit}`, harvestQuality, harvestNotes.trim()].filter(Boolean).join(" · "),
-            recordType: "HARVEST",
-            recordId: record.id
-          });
-        } catch (err) {
-          setError(err instanceof Error ? `수확기록은 저장됐지만 사진 저장에 실패했습니다: ${err.message}` : "수확기록은 저장됐지만 사진 저장에 실패했습니다.");
-        } finally {
-          setRecordPhotoSaving("");
-        }
+            description: ["수확기록", sheetPlantName(harvestPlantId), `${harvestQty}${harvestUnit}`, harvestQuality, harvestNotes.trim()].filter(Boolean).join(" · ")
+          })
+          : undefined;
+        await addHarvestRecord({
+          managementSheetId: activeSheet.id,
+          managementSheetPlantId: harvestPlantId,
+          harvestDate,
+          quantity,
+          unit: harvestUnit,
+          quality: harvestQuality,
+          notes: harvestNotes
+        }, attachedPhoto);
+      } finally {
+        setRecordPhotoSaving("");
       }
       setHarvestDate(todayIsoDate());
       setHarvestPlantId("");
@@ -857,7 +842,6 @@ export default function ManagementSheetPage() {
       setHarvestQuality("보통");
       setHarvestNotes("");
       clearRecordPhoto("harvest");
-      setRecordPhotoSaving("");
     });
   }
 
