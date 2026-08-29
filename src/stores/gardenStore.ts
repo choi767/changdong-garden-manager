@@ -32,6 +32,7 @@ type PlantFormInput = Pick<
   | "name"
   | "category"
   | "plantingPeriod"
+  | "seedlingPlantingPeriod"
   | "harvestPeriod"
   | "floweringPeriod"
   | "flowerColor"
@@ -119,6 +120,7 @@ function withDefaults(data: AppData): AppData {
   const plants = (data.plants ?? []).map((plant) => ({
     ...plant,
     category: plant.category ?? "CROP",
+    seedlingPlantingPeriod: plant.seedlingPlantingPeriod ?? "",
     floweringPeriod: plant.floweringPeriod ?? "",
     flowerColor: plant.flowerColor ?? "",
     plantHeight: plant.plantHeight ?? "",
@@ -493,6 +495,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       normalizedName: normalizePlantName(input.name),
       category: input.category,
       plantingPeriod: input.plantingPeriod,
+      seedlingPlantingPeriod: input.seedlingPlantingPeriod,
       harvestPeriod: input.harvestPeriod,
       floweringPeriod: input.floweringPeriod,
       flowerColor: input.flowerColor,

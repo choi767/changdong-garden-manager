@@ -9,6 +9,7 @@ interface PlantFormState {
   name: string;
   category: PlantCategory;
   plantingPeriod: string;
+  seedlingPlantingPeriod: string;
   harvestPeriod: string;
   floweringPeriod: string;
   flowerColor: string;
@@ -35,6 +36,7 @@ const emptyForm: PlantFormState = {
   name: "",
   category: "CROP",
   plantingPeriod: "",
+  seedlingPlantingPeriod: "",
   harvestPeriod: "",
   floweringPeriod: "",
   flowerColor: "",
@@ -65,6 +67,7 @@ function toForm(plant: Plant): PlantFormState {
     name: plant.name,
     category: plant.category ?? "CROP",
     plantingPeriod: plant.plantingPeriod,
+    seedlingPlantingPeriod: plant.seedlingPlantingPeriod ?? "",
     harvestPeriod: plant.harvestPeriod,
     floweringPeriod: plant.floweringPeriod ?? "",
     flowerColor: plant.flowerColor ?? "",
@@ -294,6 +297,7 @@ export default function PlantDatabasePage() {
               <dt>식물명</dt><dd>{plant.name}</dd>
               <dt>분류</dt><dd>{plantCategoryLabel[plant.category ?? "CROP"]}</dd>
               <dt>파종시기(남부)</dt><dd>{plant.plantingPeriod || "미지정"}</dd>
+              <dt>묘종식재시기(남부)</dt><dd>{plant.seedlingPlantingPeriod || "미지정"}</dd>
               <dt>예상수확시기</dt><dd>{plant.harvestPeriod || "미지정"}</dd>
               <dt>일조조건</dt><dd>{sunlightLabel[plant.sunlight]}</dd>
               <dt>물주기</dt><dd>{plant.watering || "미지정"}</dd>
@@ -411,6 +415,10 @@ export default function PlantDatabasePage() {
           <label>
             파종시기(남부)
             <textarea className="compact-textarea" value={form.plantingPeriod} onChange={(event) => patchForm("plantingPeriod", event.target.value)} placeholder="예: 4월초순" />
+          </label>
+          <label>
+            묘종식재시기(남부)
+            <textarea className="compact-textarea" value={form.seedlingPlantingPeriod} onChange={(event) => patchForm("seedlingPlantingPeriod", event.target.value)} placeholder="예: 4월중순" />
           </label>
           <label>
             예상수확시기

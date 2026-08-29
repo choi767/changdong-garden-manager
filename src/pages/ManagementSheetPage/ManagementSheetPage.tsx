@@ -1095,6 +1095,7 @@ export default function ManagementSheetPage() {
                       <dt>식물명</dt><dd>{item.plant.name}</dd>
                       <dt>분류</dt><dd>{plantCategoryLabel[item.plant.category ?? "CROP"]}</dd>
                       <dt>파종시기(남부)</dt><dd>{item.plant.plantingPeriod || "미지정"}</dd>
+                      <dt>묘종식재시기(남부)</dt><dd>{item.plant.seedlingPlantingPeriod || "미지정"}</dd>
                       <dt>예상수확시기</dt><dd>{item.plant.harvestPeriod || "미지정"}</dd>
                       <dt>일조조건</dt><dd>{sunlightLabel[item.plant.sunlight]}</dd>
                       <dt>물주기</dt><dd>{item.plant.watering || "미지정"}</dd>

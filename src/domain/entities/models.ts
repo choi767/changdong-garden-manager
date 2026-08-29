@@ -64,6 +64,7 @@ export interface Plant {
   normalizedName: string;
   category: PlantCategory;
   plantingPeriod: string;
+  seedlingPlantingPeriod: string;
   harvestPeriod: string;
   floweringPeriod: string;
   flowerColor: string;
