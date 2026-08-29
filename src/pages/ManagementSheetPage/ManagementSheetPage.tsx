@@ -223,7 +223,6 @@ export default function ManagementSheetPage() {
   const [workDate, setWorkDate] = useState(todayIsoDate());
   const [workPlantId, setWorkPlantId] = useState("");
   const [workType, setWorkType] = useState("물주기");
-  const [customWorkType, setCustomWorkType] = useState("");
   const [workContent, setWorkContent] = useState("");
   const [workRepeatUnit, setWorkRepeatUnit] = useState<WorkRepeatUnit>("NONE");
   const [workRepeatEvery, setWorkRepeatEvery] = useState("0");
@@ -725,15 +724,10 @@ export default function ManagementSheetPage() {
   async function onAddWork(event: FormEvent) {
     event.preventDefault();
     if (!requireCultivationSaved()) return;
-    const resolvedWorkType = workType === "직접입력" ? customWorkType.trim() : workType;
-    if (!resolvedWorkType) {
-      setError("직접입력 작업 종류를 입력해 주세요.");
-      return;
-    }
     try {
       const workDates = buildWorkDates(workDate, workRepeatUnit, workRepeatEvery, workRepeatEndDate);
       setError("");
-      setPendingWorkLog({ workDates, workType: resolvedWorkType, content: workContent, managementSheetPlantId: workPlantId || null, isRepeating: workRepeatUnit !== "NONE" });
+      setPendingWorkLog({ workDates, workType, content: workContent, managementSheetPlantId: workPlantId || null, isRepeating: workRepeatUnit !== "NONE" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "반복 작업 설정을 확인해 주세요.");
     }
@@ -776,7 +770,6 @@ export default function ManagementSheetPage() {
       setPendingWorkLog(null);
       setWorkPlantId("");
       setWorkContent("");
-      if (workType === "직접입력") setCustomWorkType("");
       setWorkRepeatUnit("NONE");
       setWorkRepeatEvery("0");
       setWorkRepeatEndDate("");
@@ -1276,12 +1269,6 @@ export default function ManagementSheetPage() {
                 {WORK_TYPE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </label>
-            {workType === "직접입력" && (
-              <label className="span-2">
-                직접입력
-                <input value={customWorkType} onChange={(event) => setCustomWorkType(event.target.value)} placeholder="작업 종류를 직접 입력" />
-              </label>
-            )}
             <div className="repeat-row span-2">
               <label>
                 반복주기
@@ -1342,7 +1329,7 @@ export default function ManagementSheetPage() {
               disabled={recordPhotoSaving === "work" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             />
           </div>
-          <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE" || cultivationBlocksOtherActions || (workType === "직접입력" && !customWorkType.trim())}>
+          <button className="primary-button wide" type="submit" disabled={sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}>
             <Calendar size={18} /> 작업/일정 저장
           </button>
           <div className="dashboard-grid task-history-grid">
