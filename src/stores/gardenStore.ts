@@ -86,6 +86,7 @@ interface GardenState {
   updatePlant: (plantId: string, input: PlantFormInput) => Promise<void>;
   deletePlant: (plantId: string) => Promise<void>;
   replacePlants: (plants: Plant[]) => Promise<void>;
+  mergePlants: (plants: Plant[]) => Promise<void>;
   addPlantToSheet: (sheetId: string, plantId: string) => Promise<void>;
   addPlantToSheetWithCultivation: (sheetId: string, plantId: string, input: SheetPlantFormInput) => Promise<void>;
   updateSheetPlant: (sheetPlantId: string, input: SheetPlantFormInput) => Promise<void>;
@@ -583,6 +584,56 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       };
     });
     await persist(set, data, "식물DB를 복원했습니다.");
+  },
+
+  async mergePlants(plants) {
+    const data = requireData(get().data);
+    const timestamp = nowIso();
+    const unmatched: string[] = [];
+    let updatedCount = 0;
+    for (const plant of plants) {
+      const normalizedName = normalizePlantName(plant.name);
+      if (!normalizedName) throw new Error("식물명은 필수입니다.");
+      const existing = data.plants.find((item) => plant.id && item.id === plant.id)
+        ?? data.plants.find((item) => item.normalizedName === normalizedName);
+      if (!existing) {
+        unmatched.push(plant.name);
+        continue;
+      }
+      if (data.plants.some((item) => item.id !== existing.id && item.normalizedName === normalizedName)) {
+        throw new Error(`중복된 식물명이 있습니다: ${plant.name}`);
+      }
+      Object.assign(existing, {
+        name: plant.name.trim(),
+        normalizedName,
+        category: plant.category ?? existing.category,
+        plantingPeriod: plant.plantingPeriod ?? "",
+        seedlingPlantingPeriod: plant.seedlingPlantingPeriod ?? "",
+        harvestPeriod: plant.harvestPeriod ?? "",
+        floweringPeriod: plant.floweringPeriod ?? "",
+        flowerColor: plant.flowerColor ?? "",
+        plantHeight: plant.plantHeight ?? "",
+        isVine: plant.isVine ?? false,
+        compoundFertilizer: plant.compoundFertilizer ?? "",
+        oilCakeFertilizer: "",
+        specializedFertilizer: "",
+        topDressing: plant.topDressing ?? "",
+        watering: plant.watering ?? "",
+        sunlight: plant.sunlight ?? "UNKNOWN",
+        notes: plant.notes ?? "",
+        imageDataUrl: plant.imageDataUrl || existing.imageDataUrl,
+        imageMimeType: plant.imageDataUrl ? plant.imageMimeType : existing.imageMimeType,
+        imageFileSize: plant.imageDataUrl ? plant.imageFileSize : existing.imageFileSize,
+        author: plant.author || existing.author || "사용자",
+        updatedAt: timestamp
+      });
+      updatedCount += 1;
+    }
+    if (unmatched.length > 0) {
+      throw new Error(`현재 식물DB에서 찾지 못한 식물이 있습니다: ${unmatched.slice(0, 5).join(", ")}${unmatched.length > 5 ? "..." : ""}`);
+    }
+    if (updatedCount === 0) throw new Error("부분복원할 식물이 없습니다.");
+    await persist(set, data, `식물DB 부분복원 ${updatedCount}개를 반영했습니다.`);
   },
 
   async addPlantToSheet(sheetId, plantId) {

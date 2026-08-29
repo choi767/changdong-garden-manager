@@ -167,6 +167,7 @@ export default function SettingsPage() {
   const resetData = useGardenStore((state) => state.resetData);
   const deleteAllPlants = useGardenStore((state) => state.deleteAllPlants);
   const replacePlants = useGardenStore((state) => state.replacePlants);
+  const mergePlants = useGardenStore((state) => state.mergePlants);
   const exportJson = useGardenStore((state) => state.exportJson);
   const importJson = useGardenStore((state) => state.importJson);
   const [bedId, setBedId] = useState("");
@@ -304,6 +305,28 @@ export default function SettingsPage() {
     }
   }
 
+  async function onImportPlantsExcelPartial(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setError("");
+    if (!isAdmin) {
+      setError("관리자만 엑셀 부분복원(식물DB)을 실행할 수 있습니다.");
+      event.target.value = "";
+      return;
+    }
+    if (!window.confirm("CSV 파일에 들어있는 식물만 현재 식물DB에 부분 반영하시겠습니까?\n나머지 식물은 그대로 유지됩니다.")) {
+      event.target.value = "";
+      return;
+    }
+    try {
+      await mergePlants(parsePlantsCsv(await file.text()));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "식물DB 엑셀 부분복원에 실패했습니다.");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
   async function onResetDevelopmentData() {
     if (!isAdmin) {
       setError("관리자만 개발용 초기화를 실행할 수 있습니다.");
@@ -369,8 +392,12 @@ export default function SettingsPage() {
                 <input type="file" accept="application/json" onChange={(event) => void onImport(event)} />
               </label>
               <label className="secondary-button file-button">
-                <Upload size={18} /> 엑셀복원(식물DB)
+                <Upload size={18} /> 엑셀복원(식물DB 전체교체)
                 <input type="file" accept=".csv,text/csv" onChange={(event) => void onImportPlantsExcel(event)} />
+              </label>
+              <label className="secondary-button file-button">
+                <Upload size={18} /> 엑셀 부분복원(식물DB)
+                <input type="file" accept=".csv,text/csv" onChange={(event) => void onImportPlantsExcelPartial(event)} />
               </label>
               <button className="danger-button" type="button" onClick={() => void onDeleteAllPlants()}><Trash2 size={18} /> 식물DB 전체삭제</button>
               <button className="danger-button" type="button" onClick={() => void onResetDevelopmentData()}><RefreshCcw size={18} /> 개발용 초기화</button>
