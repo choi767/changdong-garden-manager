@@ -31,7 +31,7 @@ export default function Layout() {
           <Database size={24} aria-hidden="true" />
           <div>
             <strong>창동 틀밭관리</strong>
-            <span>v1.2 Cloud</span>
+            <span>v2.2 Cloud</span>
           </div>
         </div>
         <nav className="nav-list" aria-label="주 메뉴">
