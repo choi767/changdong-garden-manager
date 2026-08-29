@@ -303,14 +303,11 @@ export default function PlantDatabasePage() {
               <dt>덩굴식물여부</dt><dd>{plant.isVine ? "덩굴" : "아님"}</dd>
               <dt>밑거름</dt><dd>{plant.compoundFertilizer || "미지정"}</dd>
               <dt>추비</dt><dd>{plant.topDressing || "미지정"}</dd>
+              <dt>기타(특이사항)</dt><dd>{plant.notes || "미지정"}</dd>
               <dt>최초등록일</dt><dd>{plant.createdAt.slice(0, 10)}</dd>
               <dt>최종수정일</dt><dd>{plant.updatedAt.slice(0, 10)}</dd>
               <dt>등록자/수정자</dt><dd>{plant.author || "사용자"}</dd>
             </dl>
-            <details className="db-details">
-              <summary className="secondary-button db-toggle">기타 보기</summary>
-              <p>기타(특이사항): {plant.notes || "미지정"}</p>
-            </details>
             <details className="db-details">
               <summary className="secondary-button db-toggle">사진보기</summary>
               {plant.imageDataUrl ? (
