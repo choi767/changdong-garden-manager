@@ -133,6 +133,7 @@ export default function PlantDatabasePage() {
   const [form, setForm] = useState<PlantFormState>(emptyForm);
   const [photoInputKey, setPhotoInputKey] = useState(0);
   const [photoUploadStatus, setPhotoUploadStatus] = useState<"idle" | "processing" | "done">("idle");
+  const [savingMessage, setSavingMessage] = useState("");
   const [error, setError] = useState("");
   const pageTopRef = useRef<HTMLDivElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -239,8 +240,10 @@ export default function PlantDatabasePage() {
     try {
       if (editingId) {
         if (!window.confirm("식물 정보를 수정하시겠습니까?")) return;
+        setSavingMessage("식물DB 수정 저장 중입니다... 잠시 기다려 주세요");
         await updatePlant(editingId, payload);
       } else {
+        setSavingMessage("식물DB 등록 저장 중입니다... 잠시 기다려 주세요");
         await addPlant(payload);
       }
       setSelectedCategory(savedCategory);
@@ -250,6 +253,8 @@ export default function PlantDatabasePage() {
       restorePlantDbTopAfterLayoutChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "식물 DB 저장에 실패했습니다.");
+    } finally {
+      setSavingMessage("");
     }
   }
 
@@ -263,14 +268,17 @@ export default function PlantDatabasePage() {
   }
 
   async function onDelete(plant: Plant) {
-    const confirmed = window.confirm(`${plant.name} 식물을 DB에서 완전삭제하시겠습니까?\n삭제한 식물은 복구할 수 없습니다.`);
+    const confirmed = window.confirm(`정말 삭제하시겠습니까?\n\n${plant.name} 식물을 DB에서 완전삭제합니다.\n삭제한 식물은 복구할 수 없습니다.`);
     if (!confirmed) return;
     setError("");
+    setSavingMessage("식물DB 삭제 중입니다... 잠시 기다려 주세요");
     try {
       await deletePlant(plant.id);
       if (editingId === plant.id) cancelEdit();
     } catch (err) {
       setError(err instanceof Error ? err.message : "식물 삭제에 실패했습니다.");
+    } finally {
+      setSavingMessage("");
     }
   }
 
@@ -285,10 +293,10 @@ export default function PlantDatabasePage() {
                 <span className="plant-name-text">{plant.name}</span>
               </strong>
               <div className="button-row compact">
-                <button className="secondary-button" type="button" onClick={() => startEdit(plant)}>
+                <button className="secondary-button" type="button" onClick={() => startEdit(plant)} disabled={Boolean(savingMessage)}>
                   <Edit3 size={18} /> 수정
                 </button>
-                <button className="danger-button" type="button" onClick={() => void onDelete(plant)}>
+                <button className="danger-button" type="button" onClick={() => void onDelete(plant)} disabled={Boolean(savingMessage)}>
                   <Trash2 size={18} /> 삭제
                 </button>
               </div>
@@ -331,6 +339,7 @@ export default function PlantDatabasePage() {
 
   return (
     <div className="page" ref={pageTopRef}>
+      {savingMessage && <div className="saving-popup" role="status" aria-live="assertive">{savingMessage}</div>}
       <header className="page-header">
         <div>
           <p className="eyebrow">식물 기본 DB</p>
@@ -466,7 +475,7 @@ export default function PlantDatabasePage() {
               <span className={`secondary-button plant-photo-upload-button ${photoUploadStatus === "done" ? "upload-done" : ""}`}>
                 {photoUploadStatus === "processing" ? "사진 처리중..." : photoUploadStatus === "done" ? "등록완료" : "파일/갤러리/구글포토 선택"}
               </span>
-              <input key={photoInputKey} className="visually-hidden-file" type="file" accept={PLANT_PHOTO_ACCEPT} disabled={photoUploadStatus === "processing"} onChange={(event) => void onPhotoChange(event.target.files?.[0])} />
+              <input key={photoInputKey} className="visually-hidden-file" type="file" accept={PLANT_PHOTO_ACCEPT} disabled={photoUploadStatus === "processing" || Boolean(savingMessage)} onChange={(event) => void onPhotoChange(event.target.files?.[0])} />
             </label>
             <p className="hint">PC에서는 파일을, 휴대폰에서는 갤러리 또는 구글포토를 선택하세요. 사진은 긴 변 {PLANT_PHOTO_MAX_SIDE}px 이하 JPEG로 압축합니다.</p>
             {form.imageDataUrl && (
@@ -483,7 +492,7 @@ export default function PlantDatabasePage() {
         </div>
 
         {error && <p className="form-error">{error}</p>}
-        <button className="primary-button wide" type="submit" ref={submitButtonRef} disabled={photoUploadStatus === "processing"}>
+        <button className="primary-button wide" type="submit" ref={submitButtonRef} disabled={photoUploadStatus === "processing" || Boolean(savingMessage)}>
           <Plus size={18} /> {editingId ? "식물 정보 수정" : "식물 DB에 등록"}
         </button>
       </form>
