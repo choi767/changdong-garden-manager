@@ -20,7 +20,7 @@ export default function HarvestOverviewPage() {
     return { code: group.displayCode, zoneId: group.zoneId, sheetId: sheet.id };
   }
 
-  function plantName(sheetPlantId: string): string {
+  function plantName(sheetPlantId: string | null): string {
     return getSheetPlantDisplayName(appData, sheetPlantId);
   }
 

@@ -127,7 +127,7 @@ export interface WorkLog {
 export interface HarvestRecord {
   id: string;
   managementSheetId: string;
-  managementSheetPlantId: string;
+  managementSheetPlantId: string | null;
   harvestDate: string;
   quantity: number;
   unit: string;

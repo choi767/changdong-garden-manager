@@ -485,7 +485,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     data.memberships = data.memberships.filter((item) => item.managementGroupId !== group.id);
     data.sheetPlants = data.sheetPlants.filter((item) => item.managementSheetId !== sheet.id);
     data.workLogs = data.workLogs.filter((item) => item.managementSheetId !== sheet.id && (!item.managementSheetPlantId || !sheetPlantIds.has(item.managementSheetPlantId)));
-    data.harvestRecords = data.harvestRecords.filter((item) => item.managementSheetId !== sheet.id && !sheetPlantIds.has(item.managementSheetPlantId));
+    data.harvestRecords = data.harvestRecords.filter((item) => item.managementSheetId !== sheet.id && (!item.managementSheetPlantId || !sheetPlantIds.has(item.managementSheetPlantId)));
     data.photos = data.photos.filter((item) => item.managementSheetId !== sheet.id && (!item.managementSheetPlantId || !sheetPlantIds.has(item.managementSheetPlantId)));
     data.scheduleReminders = data.scheduleReminders.filter((item) => item.managementSheetId !== sheet.id && (!item.managementSheetPlantId || !sheetPlantIds.has(item.managementSheetPlantId)));
     data.observationMemos = data.observationMemos.filter((item) => item.managementSheetId !== sheet.id && (!item.managementSheetPlantId || !sheetPlantIds.has(item.managementSheetPlantId)));
@@ -778,7 +778,6 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addHarvestRecord(input, photo) {
-    if (!input.managementSheetPlantId) throw new Error("수확기록은 반드시 관리표의 식물과 연결되어야 합니다.");
     return persistMutation(set, () => get().data, "수확기록을 저장했습니다.", (data) => {
       const timestamp = nowIso();
       const record = { ...input, id: makeId("harvest"), createdAt: timestamp, updatedAt: timestamp };

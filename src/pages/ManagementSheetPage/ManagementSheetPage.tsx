@@ -246,6 +246,8 @@ export default function ManagementSheetPage() {
   const [harvestUnit, setHarvestUnit] = useState("개");
   const [harvestQuality, setHarvestQuality] = useState("보통");
   const [harvestNotes, setHarvestNotes] = useState("");
+  const [harvestConfirm, setHarvestConfirm] = useState<{ quantity: number } | null>(null);
+  const [harvestFormMessage, setHarvestFormMessage] = useState("");
   const [photoDate, setPhotoDate] = useState(todayIsoDate());
   const [photoPlantId, setPhotoPlantId] = useState("");
   const [photoDescription, setPhotoDescription] = useState("");
@@ -801,14 +803,20 @@ export default function ManagementSheetPage() {
     event.preventDefault();
     if (!requireCultivationSaved()) return;
     const quantity = Number(harvestQty);
-    if (!harvestPlantId) {
-      setError("수확한 식물을 선택해 주세요.");
+    setHarvestFormMessage("");
+    setHarvestConfirm(null);
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      setHarvestFormMessage("수확량은 0 이상의 숫자로 입력해 주세요.");
       return;
     }
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setError("수확량은 0보다 큰 숫자로 입력해 주세요.");
+    if (quantity === 0 || !harvestPlantId) {
+      setHarvestConfirm({ quantity });
       return;
     }
+    await saveHarvestRecord(quantity);
+  }
+
+  async function saveHarvestRecord(quantity: number) {
     await run(async () => {
       if (recordPhotoFiles.harvest) setRecordPhotoSaving("harvest");
       try {
@@ -820,7 +828,7 @@ export default function ManagementSheetPage() {
           : undefined;
         await addHarvestRecord({
           managementSheetId: activeSheet.id,
-          managementSheetPlantId: harvestPlantId,
+          managementSheetPlantId: harvestPlantId || null,
           harvestDate,
           quantity,
           unit: harvestUnit,
@@ -836,6 +844,8 @@ export default function ManagementSheetPage() {
       setHarvestUnit("개");
       setHarvestQuality("보통");
       setHarvestNotes("");
+      setHarvestConfirm(null);
+      setHarvestFormMessage("");
       clearRecordPhoto("harvest");
     });
   }
@@ -1631,14 +1641,22 @@ export default function ManagementSheetPage() {
             </label>
             <label>
               수확 식물
-              <select value={harvestPlantId} onChange={(event) => setHarvestPlantId(event.target.value)}>
+              <select value={harvestPlantId} onChange={(event) => {
+                setHarvestPlantId(event.target.value);
+                setHarvestConfirm(null);
+                setHarvestFormMessage("");
+              }}>
                 <option value="">식물 선택</option>
                 {sheetPlants.map((item) => <option key={item.id} value={item.id}>{sheetPlantName(item.id)}</option>)}
               </select>
             </label>
             <label>
               수확량
-              <input value={harvestQty} inputMode="decimal" onChange={(event) => setHarvestQty(event.target.value)} />
+              <input value={harvestQty} inputMode="decimal" onChange={(event) => {
+                setHarvestQty(event.target.value);
+                setHarvestConfirm(null);
+                setHarvestFormMessage("");
+              }} />
             </label>
             <label>
               단위
@@ -1664,12 +1682,22 @@ export default function ManagementSheetPage() {
               <textarea className="compact-textarea" value={harvestNotes} onChange={(event) => setHarvestNotes(event.target.value)} placeholder="필요시 수확 상태나 사용처를 기록하세요" />
             </label>
           </div>
+          {harvestFormMessage && <p className="form-error local-form-message">{harvestFormMessage}</p>}
+          {harvestConfirm && (
+            <div className="inline-confirm-box">
+              <strong>수확량 0 또는 식물 미선택 입니다. 그래도 저장할까요?</strong>
+              <div className="button-row compact">
+                <button className="primary-button compact-action" type="button" onClick={() => void saveHarvestRecord(harvestConfirm.quantity)} disabled={recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}>저장</button>
+                <button className="secondary-button compact-action" type="button" onClick={() => setHarvestConfirm(null)}>취소</button>
+              </div>
+            </div>
+          )}
           <div className="record-action-row">
             <button
               className={recordPhotoButtonClass("harvest")}
               type="button"
               onClick={() => harvestPhotoFileInputRef.current?.click()}
-              disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
+              disabled={recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             >
               <ImagePlus size={18} /> {recordPhotoLabel("harvest")}
             </button>
@@ -1680,9 +1708,9 @@ export default function ManagementSheetPage() {
               type="file"
               accept={PHOTO_ACCEPT}
               onChange={(event) => onRecordPhotoFileChange("harvest", event.target.files?.[0])}
-              disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
+              disabled={recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}
             />
-            <button className="primary-button" type="submit" disabled={!harvestPlantId || recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}>수확 저장</button>
+            <button className="primary-button" type="submit" disabled={recordPhotoSaving === "harvest" || sheet.status !== "ACTIVE" || cultivationBlocksOtherActions}>수확 저장</button>
           </div>
           <div className="timeline">
             {visibleHarvestRecords.map((record) => {

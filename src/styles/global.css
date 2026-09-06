@@ -1463,6 +1463,23 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   color: #8a2118;
   font-weight: 800;
 }
+.local-form-message {
+  margin-top: 2px;
+}
+.inline-confirm-box {
+  display: grid;
+  gap: 10px;
+  margin: 2px 0 0;
+  padding: 14px;
+  border: 2px solid #d99b18;
+  border-radius: 8px;
+  background: #fff2a8;
+  color: #4b3200;
+  font-weight: 900;
+}
+.inline-confirm-box .button-row {
+  margin-top: 0;
+}
 
 .notice {
   position: fixed;
