@@ -7,6 +7,7 @@ import { useGardenStore } from "../../stores/gardenStore";
 export default function PestOverviewPage() {
   const data = useGardenStore((state) => state.data);
   const deletePestRecord = useGardenStore((state) => state.deletePestRecord);
+  const deletePhoto = useGardenStore((state) => state.deletePhoto);
 
   if (!data) return null;
   const appData = data;
@@ -31,6 +32,11 @@ export default function PestOverviewPage() {
   async function onDelete(id: string) {
     if (!window.confirm("이 병해충기록을 삭제하시겠습니까?")) return;
     await deletePestRecord(id);
+  }
+
+  async function onDeletePhoto(photoId: string) {
+    if (!window.confirm("이 사진을 삭제하시겠습니까?")) return;
+    await deletePhoto(photoId);
   }
 
   return (
@@ -64,7 +70,7 @@ export default function PestOverviewPage() {
                         {item.symptom ? `: ${item.symptom}` : ""}
                         {item.action ? ` / ${item.action}` : ""}
                       </p>
-                      <RecordPhotoGallery photos={photosForRecord(item.id)} />
+                      <RecordPhotoGallery photos={photosForRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                     </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}>
                       <Trash2 size={16} /> 삭제

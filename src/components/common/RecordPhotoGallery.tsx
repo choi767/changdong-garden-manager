@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Photo } from "../../domain/entities/models";
 
-function RecordPhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (photo: Photo, url: string) => void }) {
+function RecordPhotoThumb({ photo, onPreview, onDelete }: { photo: Photo; onPreview: (photo: Photo, url: string) => void; onDelete?: () => void }) {
   const [imageUrl, setImageUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
 
@@ -17,13 +17,16 @@ function RecordPhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (phot
   }, [photo.imageBlob, photo.thumbnailBlob]);
 
   return (
-    <button className="record-photo-thumb-button" type="button" onClick={() => onPreview(photo, imageUrl)} aria-label="사진 크게 보기">
-      {thumbnailUrl && <img src={thumbnailUrl} alt={photo.description || `${photo.photoDate} 사진`} />}
-    </button>
+    <div className="record-photo-item">
+      <button className="record-photo-thumb-button" type="button" onClick={() => onPreview(photo, imageUrl)} aria-label="사진 크게 보기">
+        {thumbnailUrl && <img src={thumbnailUrl} alt={photo.description || `${photo.photoDate} 사진`} />}
+      </button>
+      {onDelete && <button className="danger-button record-photo-delete-button" type="button" onClick={onDelete}>사진삭제</button>}
+    </div>
   );
 }
 
-export default function RecordPhotoGallery({ photos }: { photos: Photo[] }) {
+export default function RecordPhotoGallery({ photos, onDeletePhoto }: { photos: Photo[]; onDeletePhoto?: (photoId: string) => void }) {
   const [previewPhoto, setPreviewPhoto] = useState<{ photo: Photo; url: string } | null>(null);
 
   if (photos.length === 0) return null;
@@ -41,7 +44,17 @@ export default function RecordPhotoGallery({ photos }: { photos: Photo[] }) {
   return (
     <>
       <div className="record-photo-list">
-        {photos.map((photo) => <RecordPhotoThumb key={photo.id} photo={photo} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />)}
+        {photos.map((photo) => (
+          <RecordPhotoThumb
+            key={photo.id}
+            photo={photo}
+            onPreview={(photo, url) => setPreviewPhoto({ photo, url })}
+            onDelete={onDeletePhoto ? () => {
+              if (previewPhoto?.photo.id === photo.id) setPreviewPhoto(null);
+              onDeletePhoto(photo.id);
+            } : undefined}
+          />
+        ))}
       </div>
       {previewPhoto && (
         <div className="modal-backdrop photo-preview-backdrop" role="presentation" onClick={() => setPreviewPhoto(null)}>

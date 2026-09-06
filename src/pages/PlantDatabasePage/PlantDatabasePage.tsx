@@ -282,6 +282,30 @@ export default function PlantDatabasePage() {
     }
   }
 
+  async function onDeletePlantPhoto(plant: Plant) {
+    const confirmed = window.confirm(`${plant.name} 식물의 사진만 삭제하시겠습니까?\n식물DB 정보는 그대로 유지됩니다.`);
+    if (!confirmed) return;
+    setError("");
+    setSavingMessage("식물DB 사진 삭제 중입니다... 잠시 기다려 주세요");
+    try {
+      await updatePlant(plant.id, {
+        ...toForm(plant),
+        imageDataUrl: "",
+        imageMimeType: "",
+        imageFileSize: 0
+      });
+      if (editingId === plant.id) {
+        setForm((prev) => ({ ...prev, imageDataUrl: "", imageMimeType: "", imageFileSize: 0 }));
+        setPhotoInputKey((prev) => prev + 1);
+        setPhotoUploadStatus("idle");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "식물 사진 삭제에 실패했습니다.");
+    } finally {
+      setSavingMessage("");
+    }
+  }
+
   function plantCards(plants: Plant[]): ReactNode {
     return (
       <section className="card-grid">
@@ -325,7 +349,10 @@ export default function PlantDatabasePage() {
               {plant.imageDataUrl ? (
                 <div className="plant-card-photo">
                   <img src={plant.imageDataUrl} alt={`${plant.name} 사진`} />
-                  <span>{formatFileSize(plant.imageFileSize)}</span>
+                  <div>
+                    <span>{formatFileSize(plant.imageFileSize)}</span>
+                    <button className="danger-button compact-action" type="button" onClick={() => void onDeletePlantPhoto(plant)} disabled={Boolean(savingMessage)}>사진삭제</button>
+                  </div>
                 </div>
               ) : (
                 <p className="empty-text">등록된 사진이 없습니다.</p>

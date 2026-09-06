@@ -7,6 +7,7 @@ import { useGardenStore } from "../../stores/gardenStore";
 export default function HarvestOverviewPage() {
   const data = useGardenStore((state) => state.data);
   const deleteHarvestRecord = useGardenStore((state) => state.deleteHarvestRecord);
+  const deletePhoto = useGardenStore((state) => state.deletePhoto);
 
   if (!data) return null;
   const appData = data;
@@ -31,6 +32,11 @@ export default function HarvestOverviewPage() {
   async function onDelete(id: string) {
     if (!window.confirm("이 수확기록을 삭제하시겠습니까?")) return;
     await deleteHarvestRecord(id);
+  }
+
+  async function onDeletePhoto(photoId: string) {
+    if (!window.confirm("이 사진을 삭제하시겠습니까?")) return;
+    await deletePhoto(photoId);
   }
 
   return (
@@ -63,7 +69,7 @@ export default function HarvestOverviewPage() {
                         {item.harvestDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)} · {item.quantity}{item.unit} · {item.quality}
                         {item.notes ? `: ${item.notes}` : ""}
                       </p>
-                      <RecordPhotoGallery photos={photosForRecord(item.id)} />
+                      <RecordPhotoGallery photos={photosForRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                     </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}>
                       <Trash2 size={16} /> 삭제

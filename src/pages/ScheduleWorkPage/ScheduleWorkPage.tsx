@@ -21,6 +21,7 @@ export default function ScheduleWorkPage() {
   const completeScheduleReminder = useGardenStore((state) => state.completeScheduleReminder);
   const deleteScheduleReminder = useGardenStore((state) => state.deleteScheduleReminder);
   const deleteWorkLog = useGardenStore((state) => state.deleteWorkLog);
+  const deletePhoto = useGardenStore((state) => state.deletePhoto);
   const [deleteTarget, setDeleteTarget] = useState<ScheduleReminder | null>(null);
 
   if (!data) return null;
@@ -96,6 +97,11 @@ export default function ScheduleWorkPage() {
     await deleteWorkLog(id);
   }
 
+  async function onDeletePhoto(photoId: string) {
+    if (!window.confirm("이 사진을 삭제하시겠습니까?")) return;
+    await deletePhoto(photoId);
+  }
+
   return (
     <div className="page">
       <header className="page-header">
@@ -151,7 +157,7 @@ export default function ScheduleWorkPage() {
                         <p>
                           {item.workDate} · {recordTargetNode(item, appData.workLogs)} · {plantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
                         </p>
-                        <RecordPhotoGallery photos={photosForWorkRecord(item.id)} />
+                        <RecordPhotoGallery photos={photosForWorkRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                       </div>
                       <button className="danger-button compact-action" type="button" onClick={() => void onDeleteWork(item.id)}>
                         <Trash2 size={16} /> 삭제

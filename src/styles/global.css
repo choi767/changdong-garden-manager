@@ -1255,6 +1255,11 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   font-size: 12px;
   font-weight: 800;
 }
+.plant-card-photo div {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
 .plant-card-photo img {
   aspect-ratio: 4 / 3;
   border-radius: 8px;
