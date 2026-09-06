@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AppData, Bed, HarvestRecord, ManagementGroup, ManagementSheet, ManagementSheetPlant, MaterialUsage, ObservationMemo, PestRecord, Photo, Plant, ScheduleReminder, SheetEvaluation, StatusHistory, WorkLog } from "../domain/entities/models";
 import { createGardenRepository } from "../infrastructure/repositories/gardenRepositoryFactory";
+import { readStoredSnapshot, writeSnapshot } from "../infrastructure/database/gardenDb";
 import { createInitialData } from "../domain/services/seedData";
 import { getActiveGroupForBed, getCurrentMemberships, getNextGroupNumber, validateAddBedsToGroup, validateGroupBedSelection, validateRemoveBedsFromGroup } from "../domain/services/groupRules";
 import { normalizePlantName, validateAddSheetPlant, validateNewPlantName } from "../domain/services/plantRules";
@@ -212,6 +213,7 @@ function history(targetType: StatusHistory["targetType"], targetId: string, prev
 
 async function persist(set: (partial: Partial<GardenState>) => void, data: AppData, message: string): Promise<void> {
   await repository.save(data);
+  void writeSnapshot(data);
   set({ data, notice: { type: "success", message } });
 }
 
@@ -269,17 +271,30 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   loading: false,
 
   async load() {
-    set({ loading: true });
+    if (!get().data) {
+      set({ loading: true });
+      try {
+        const cachedData = await readStoredSnapshot();
+        if (cachedData) {
+          set({ data: withDefaults(cachedData), loading: false });
+        }
+      } catch {
+        // A missing or blocked local cache should not delay the cloud load.
+      }
+    }
     try {
       const data = await repository.load();
       const normalized = withDefaults(data);
       if (normalized.beds.length !== data.beds.length) {
         await repository.save(normalized);
       }
+      void writeSnapshot(normalized);
       if (!unsubscribeRemoteData && repository.subscribe) {
         unsubscribeRemoteData = repository.subscribe((remoteData) => {
+          const normalizedRemoteData = withDefaults(remoteData);
+          void writeSnapshot(normalizedRemoteData);
           set({
-            data: withDefaults(remoteData),
+            data: normalizedRemoteData,
             notice: { type: "info", message: "다른 사용자의 변경사항을 반영했습니다." }
           });
         });
@@ -977,6 +992,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const data = createInitialData();
     data.plants = currentData?.plants ?? [];
     await repository.reset(data);
+    void writeSnapshot(data);
     set({ data, notice: { type: "success", message: "개발용 초기화를 완료했습니다. 식물DB는 보존했습니다." } });
   },
 
@@ -1000,6 +1016,8 @@ export const useGardenStore = create<GardenState>((set, get) => ({
 
   async importJson(json) {
     const data = await repository.importJson(json);
-    set({ data: withDefaults(data), notice: { type: "success", message: "백업 데이터를 가져왔습니다." } });
+    const normalized = withDefaults(data);
+    void writeSnapshot(normalized);
+    set({ data: normalized, notice: { type: "success", message: "백업 데이터를 가져왔습니다." } });
   }
 }));

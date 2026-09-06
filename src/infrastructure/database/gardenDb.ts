@@ -78,6 +78,15 @@ export async function readSnapshot(): Promise<AppData> {
   return initial;
 }
 
+export async function readStoredSnapshot(): Promise<AppData | null> {
+  const db = await openGardenDb();
+  const transaction = db.transaction(STORE_NAME, "readonly");
+  const store = transaction.objectStore(STORE_NAME);
+  const record = await requestToPromise<SnapshotRecord | undefined>(store.get(DATA_KEY));
+  db.close();
+  return record?.data ?? null;
+}
+
 async function loadEmbeddedBackupPayload(): Promise<EmbeddedBackupPayload | undefined> {
   const globalPayload = (globalThis as { __CHANGDONG_EMBEDDED_BACKUP__?: EmbeddedBackupPayload }).__CHANGDONG_EMBEDDED_BACKUP__;
   if (globalPayload?.data) return globalPayload;
