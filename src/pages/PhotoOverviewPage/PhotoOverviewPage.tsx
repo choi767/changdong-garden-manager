@@ -94,7 +94,7 @@ export default function PhotoOverviewPage() {
                       {item.description ? ` · ${item.description}` : ""}
                     </p>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}>
-                      <Trash2 size={16} /> 삭제
+                      <Trash2 size={16} /> 사진삭제
                     </button>
                   </div>
                 );

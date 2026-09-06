@@ -137,7 +137,7 @@ function PhotoCard({ photo, plantName, onDelete, onPreview }: { photo: Photo; pl
       <div>
         <div className="card-title-row">
           <strong>{photo.photoDate}</strong>
-          <button className="danger-button compact-action" type="button" onClick={onDelete}>삭제</button>
+          <button className="danger-button compact-action" type="button" onClick={onDelete}>사진삭제</button>
         </div>
         <p>{plantName}</p>
         {photo.description && <p className="photo-description">{photo.description}</p>}
