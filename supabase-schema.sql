@@ -79,3 +79,53 @@ end;
 $$;
 
 grant execute on function public.save_garden_snapshot(text, jsonb, bigint) to authenticated;
+
+create or replace function public.save_garden_snapshot_v2(
+  p_id text,
+  p_data jsonb,
+  p_expected_revision bigint
+)
+returns table(revision bigint)
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_revision bigint;
+begin
+  if auth.uid() is null then
+    raise exception 'GARDEN_SNAPSHOT_AUTH_REQUIRED';
+  end if;
+
+  if p_expected_revision is null then
+    insert into public.garden_snapshots (id, data, revision, updated_by)
+    values (p_id, p_data, 1, auth.uid())
+    on conflict (id) do nothing
+    returning garden_snapshots.revision into v_revision;
+
+    if v_revision is null then
+      select gs.revision into v_revision
+      from public.garden_snapshots as gs
+      where gs.id = p_id;
+    end if;
+  else
+    update public.garden_snapshots as gs
+    set
+      data = p_data,
+      revision = gs.revision + 1,
+      updated_at = now(),
+      updated_by = auth.uid()
+    where gs.id = p_id
+      and gs.revision = p_expected_revision
+    returning gs.revision into v_revision;
+
+    if v_revision is null then
+      raise exception 'GARDEN_SNAPSHOT_CONFLICT';
+    end if;
+  end if;
+
+  return query select v_revision;
+end;
+$$;
+
+grant execute on function public.save_garden_snapshot_v2(text, jsonb, bigint) to authenticated;

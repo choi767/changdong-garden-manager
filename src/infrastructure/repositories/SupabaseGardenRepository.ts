@@ -16,7 +16,6 @@ interface SnapshotRow {
 }
 
 interface SaveSnapshotResult {
-  data: SerializedAppData;
   revision: number;
 }
 
@@ -51,7 +50,7 @@ export class SupabaseGardenRepository implements GardenRepository {
     const serialized = await serializeAppData(initial);
     const inserted = await this.saveSnapshot(serialized, null);
     this.revision = inserted.revision;
-    return deserializeAppData(inserted.data);
+    return deserializeAppData(serialized);
   }
 
   async save(data: AppData): Promise<void> {
@@ -73,7 +72,7 @@ export class SupabaseGardenRepository implements GardenRepository {
     const payload = parseBackupPayload(json);
     const saved = await this.saveSnapshot(payload.data, this.revision);
     this.revision = saved.revision;
-    return deserializeAppData(saved.data);
+    return deserializeAppData(payload.data);
   }
 
   subscribe(onRemoteData: (data: AppData) => void): () => void {
@@ -127,6 +126,28 @@ export class SupabaseGardenRepository implements GardenRepository {
   }
 
   private async saveSnapshot(data: SerializedAppData, expectedRevision: number | null): Promise<SaveSnapshotResult> {
+    const { data: saved, error } = await this.client.rpc("save_garden_snapshot_v2", {
+      p_id: this.snapshotId,
+      p_data: data,
+      p_expected_revision: expectedRevision
+    });
+
+    if (error) {
+      if (isMissingRpcFunction(error)) {
+        return this.saveSnapshotWithLegacyFunction(data, expectedRevision);
+      }
+      if (error.message.includes("GARDEN_SNAPSHOT_CONFLICT")) throw new CloudConflictError();
+      throw new Error(`Supabase 저장에 실패했습니다: ${error.message}`);
+    }
+
+    const row = Array.isArray(saved) ? saved[0] : saved;
+    if (typeof row?.revision !== "number") {
+      throw new Error("Supabase 저장 결과가 올바르지 않습니다.");
+    }
+    return row as SaveSnapshotResult;
+  }
+
+  private async saveSnapshotWithLegacyFunction(data: SerializedAppData, expectedRevision: number | null): Promise<SaveSnapshotResult> {
     const { data: saved, error } = await this.client.rpc("save_garden_snapshot", {
       p_id: this.snapshotId,
       p_data: data,
@@ -139,9 +160,13 @@ export class SupabaseGardenRepository implements GardenRepository {
     }
 
     const row = Array.isArray(saved) ? saved[0] : saved;
-    if (!row?.data || typeof row.revision !== "number") {
+    if (typeof row?.revision !== "number") {
       throw new Error("Supabase 저장 결과가 올바르지 않습니다.");
     }
-    return row as SaveSnapshotResult;
+    return { revision: row.revision };
   }
+}
+
+function isMissingRpcFunction(error: { code?: string; message: string }): boolean {
+  return error.code === "PGRST202" || error.message.includes("save_garden_snapshot_v2");
 }
