@@ -340,7 +340,7 @@ export default function HomePage() {
                                 <path d={shapePath} />
                               </svg>
                             )}
-                            <strong>{label}</strong>
+                            <strong style={zone.zoneNumber === 6 && bed.bedNumber <= 8 ? { position: "absolute", top: `${(zone6MapLayout[1].height / 2 / position.height) * 100}%`, transform: "translateY(-50%)" } : undefined}>{label}</strong>
                           </button>
                         );
                       })}
