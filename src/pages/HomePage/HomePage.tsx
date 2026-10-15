@@ -255,7 +255,7 @@ export default function HomePage() {
       <div className="home-fixed-top">
         <header className="home-header">
           <p className="home-welcome">정원에 오신 느낌으로...</p>
-          <h1>창동 틀밭 농장</h1>
+          <h1>틀밭 농장 관리</h1>
           <p className="home-subtitle">당신의 경작틀, 식물과 작업내용을 관리합니다</p>
           <p className="home-version">틀밭관리 v2.6.0</p>
         </header>
