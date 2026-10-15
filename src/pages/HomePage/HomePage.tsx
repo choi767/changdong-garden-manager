@@ -4,6 +4,7 @@ import StatusPill from "../../components/common/StatusPill";
 import { bedStatusLabel } from "../../domain/enums/status";
 import { getActiveGroupForBedId, getBedLabelList, getCurrentBedsForGroup, getGroupSheet, getSheetPlants, makeSheetPlantDisplayNameMap } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
+import { zone6MapLayout } from "../../domain/services/zone6";
 
 type MapPosition = {
   left: number;
@@ -19,6 +20,7 @@ const zone2ShapePaths: Record<string, string> = {
 };
 
 const zoneMapLayouts: Record<number, Record<string, MapPosition>> = {
+  6: zone6MapLayout,
   1: {
     1: { left: 3, top: 30, width: 10.5, height: 12.5 },
     2: { left: 13.5, top: 17.5, width: 10.5, height: 12.5 },
@@ -255,7 +257,7 @@ export default function HomePage() {
           <p className="home-welcome">정원에 오신 느낌으로...</p>
           <h1>창동 틀밭 농장</h1>
           <p className="home-subtitle">당신의 경작틀, 식물과 작업내용을 관리합니다</p>
-          <p className="home-version">틀밭관리 v2.5.0</p>
+          <p className="home-version">틀밭관리 v2.6.0</p>
         </header>
 
         <form className="home-find-form" onSubmit={(event) => void onFindGroup(event)}>
@@ -299,7 +301,7 @@ export default function HomePage() {
                 return (
                   <article className={`zone-map-board ${zoneLayout ? "zone-map-drawn" : "zone-map-fallback"}`} key={zone.id}>
                     <div className="zone-map-heading">
-                      <h3 className={zone.zoneNumber === 4 ? "zone-training-title" : ""}>Zone {zone.zoneNumber}</h3>
+                      <h3 className={zone.zoneNumber === 4 ? "zone-training-title" : ""}>Zone {zone.zoneNumber}{zone.zoneNumber === 6 ? " (염호리)" : ""}</h3>
                       <div className="zone-map-legend" aria-label="범례">
                         <span><i className="legend-box active" />경작</span>
                         <span><i className="legend-box fallow" />휴경</span>

@@ -1,10 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { createInitialData } from "../domain/services/seedData";
+import { ensureZone6, zone6MapLayout } from "../domain/services/zone6";
 import { validateAddSheetPlant, validateNewPlantName } from "../domain/services/plantRules";
 import { getNextGroupNumber, validateGroupBedSelection, validateRemoveBedsFromGroup } from "../domain/services/groupRules";
 import { makeSheetPlantDisplayNameMap } from "../domain/services/selectors";
 
-describe("창동 틀밭관리 V2.4.1 업무 규칙", () => {
+describe("창동 틀밭관리 업무 규칙", () => {
+  it("기존 기록과 틀 상태를 유지하며 Zone 5 없이 Zone 6을 한 번만 추가한다", () => {
+    const data = createInitialData();
+    data.zones = data.zones.filter((zone) => zone.zoneNumber !== 6);
+    data.beds = data.beds.filter((bed) => bed.zoneNumber !== 6);
+    data.beds[0].status = "ACTIVE";
+    const migrated = ensureZone6(data);
+    const repeated = ensureZone6(migrated);
+    expect(repeated.zones.map((zone) => zone.zoneNumber)).toEqual([1, 2, 3, 4, 6]);
+    expect(repeated.beds.filter((bed) => bed.zoneNumber === 6)).toHaveLength(10);
+    expect(repeated.beds[0]).toBe(data.beds[0]);
+    expect(repeated.beds[0].status).toBe("ACTIVE");
+    expect(repeated.beds.filter((bed) => bed.zoneNumber === 6).map((bed) => bed.displayCode))
+      .toEqual(Array.from({ length: 10 }, (_, index) => `6-${index + 1}`));
+    for (const position of Object.values(zone6MapLayout)) {
+      expect(position.left + position.width).toBeLessThanOrEqual(100);
+      expect(position.top + position.height).toBeLessThanOrEqual(100);
+    }
+  });
   it("초기 데이터는 Zone1 24개, Zone2 43개, Zone3 10개 틀을 만든다", () => {
     const data = createInitialData();
     expect(data.beds.filter((bed) => bed.zoneNumber === 1)).toHaveLength(24);

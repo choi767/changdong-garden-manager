@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getNextGroupNumber } from "../../domain/services/groupRules";
 import { useGardenStore } from "../../stores/gardenStore";
+import { zone6MapLayout } from "../../domain/services/zone6";
 
 type MapPosition = {
   left: number;
@@ -17,6 +18,7 @@ const zone2ShapePaths: Record<string, string> = {
 };
 
 const zoneMapLayouts: Record<number, Record<string, MapPosition>> = {
+  6: zone6MapLayout,
   1: {
     1: { left: 3, top: 30, width: 10.5, height: 12.5 },
     2: { left: 13.5, top: 17.5, width: 10.5, height: 12.5 },
@@ -257,7 +259,7 @@ export default function CreateManagementGroupPage() {
           {zone && (
             <article className={`zone-map-board create-zone-map ${zoneLayout ? "zone-map-drawn" : "zone-map-fallback"}`}>
               <div className="zone-map-heading">
-                <h3 className={zone.zoneNumber === 4 ? "zone-training-title" : ""}>Zone {zone.zoneNumber}</h3>
+                <h3 className={zone.zoneNumber === 4 ? "zone-training-title" : ""}>Zone {zone.zoneNumber}{zone.zoneNumber === 6 ? " (염호리)" : ""}</h3>
               </div>
               {zone.zoneNumber === 4 && <p className="zone-training-note">연습용 구역입니다</p>}
               <div className={`zone-map-canvas zone-map-canvas-z${zone.zoneNumber}`}>

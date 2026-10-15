@@ -668,6 +668,15 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 .zone-map-canvas-z4 {
   aspect-ratio: 4 / 3;
 }
+.zone-map-canvas-z6 {
+  aspect-ratio: 718 / 410;
+}
+.zone-map-canvas-z6 .zone-bed-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
 .zone-training-title {
   color: #0f5faa !important;
 }

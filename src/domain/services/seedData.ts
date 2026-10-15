@@ -1,5 +1,6 @@
 import type { AppData, Bed, Zone } from "../entities/models";
 import { nowIso } from "../../utils/id";
+import { ensureZone6 } from "./zone6";
 
 interface BedSpec {
   bedNumber: number;
@@ -83,7 +84,7 @@ export function createInitialData(): AppData {
     ...createBeds(zones[3], 12)
   ];
 
-  return {
+  return ensureZone6({
     zones,
     beds,
     managementGroups: [],
@@ -104,5 +105,5 @@ export function createInitialData(): AppData {
       { id: "setting_map_title", key: "mapTitle", value: "창동 틀밭 전체 배치도", updatedAt: nowIso() }
     ],
     backgroundImages: []
-  };
+  });
 }

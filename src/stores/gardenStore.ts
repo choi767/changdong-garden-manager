@@ -3,6 +3,7 @@ import type { AppData, Bed, HarvestRecord, ManagementGroup, ManagementSheet, Man
 import { createGardenRepository } from "../infrastructure/repositories/gardenRepositoryFactory";
 import { readStoredSnapshot, writeSnapshot } from "../infrastructure/database/gardenDb";
 import { createInitialData } from "../domain/services/seedData";
+import { ensureZone6 } from "../domain/services/zone6";
 import { getActiveGroupForBed, getCurrentMemberships, getNextGroupNumber, validateAddBedsToGroup, validateGroupBedSelection, validateRemoveBedsFromGroup } from "../domain/services/groupRules";
 import { normalizePlantName, validateAddSheetPlant, validateNewPlantName } from "../domain/services/plantRules";
 import { makeId, nowIso, todayIsoDate } from "../utils/id";
@@ -119,6 +120,7 @@ interface GardenState {
 }
 
 function withDefaults(data: AppData): AppData {
+  data = ensureZone6(data);
   const beds = [...data.beds];
   const plants = (data.plants ?? []).map((plant) => ({
     ...plant,
