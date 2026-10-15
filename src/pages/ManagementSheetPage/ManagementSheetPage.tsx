@@ -222,7 +222,8 @@ export default function ManagementSheetPage() {
   const [pendingNewPlantId, setPendingNewPlantId] = useState("");
   const [workDate, setWorkDate] = useState(todayIsoDate());
   const [workPlantId, setWorkPlantId] = useState("");
-  const [workType, setWorkType] = useState("물주기");
+  const [workTypes, setWorkTypes] = useState<string[]>(["물주기"]);
+  const [workTypeError, setWorkTypeError] = useState("");
   const [workContent, setWorkContent] = useState("");
   const [workRepeatUnit, setWorkRepeatUnit] = useState<WorkRepeatUnit>("NONE");
   const [workRepeatEvery, setWorkRepeatEvery] = useState("0");
@@ -726,9 +727,16 @@ export default function ManagementSheetPage() {
   async function onAddWork(event: FormEvent) {
     event.preventDefault();
     if (!requireCultivationSaved()) return;
+    if (workTypes.length === 0) {
+      setWorkTypeError("작업 종류를 하나 이상 선택하세요.");
+      event.currentTarget.querySelector<HTMLInputElement>(".work-type-options input")?.focus();
+      return;
+    }
+    setWorkTypeError("");
     try {
       const workDates = buildWorkDates(workDate, workRepeatUnit, workRepeatEvery, workRepeatEndDate);
       setError("");
+      const workType = WORK_TYPE_OPTIONS.filter((option) => workTypes.includes(option)).join(", ");
       setPendingWorkLog({ workDates, workType, content: workContent, managementSheetPlantId: workPlantId || null, isRepeating: workRepeatUnit !== "NONE" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "반복 작업 설정을 확인해 주세요.");
@@ -1273,12 +1281,22 @@ export default function ManagementSheetPage() {
                 {sheetPlants.map((item) => <option key={item.id} value={item.id}>{sheetPlantName(item.id)}</option>)}
               </select>
             </label>
-            <label>
-              작업 종류
-              <select value={workType} onChange={(event) => setWorkType(event.target.value)}>
-                {WORK_TYPE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-            </label>
+            <fieldset className="work-type-fieldset span-2" aria-describedby={workTypeError ? "work-type-error" : undefined}>
+              <legend>작업 종류</legend>
+              <div className="work-type-options">
+                {WORK_TYPE_OPTIONS.map((option) => (
+                  <label className={`work-type-option ${workTypes.includes(option) ? "checked" : ""}`} key={option}>
+                    <input type="checkbox" checked={workTypes.includes(option)} onChange={(event) => {
+                      const checked = event.target.checked;
+                      setWorkTypes((current) => checked ? [...current, option] : current.filter((item) => item !== option));
+                      setWorkTypeError("");
+                    }} disabled={sheet.status !== "ACTIVE" || cultivationBlocksOtherActions} />
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
+              {workTypeError && <p id="work-type-error" className="form-error" role="alert">{workTypeError}</p>}
+            </fieldset>
             <div className="repeat-row span-2">
               <label>
                 반복주기

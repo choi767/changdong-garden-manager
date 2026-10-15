@@ -1092,6 +1092,82 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.work-type-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.work-type-fieldset legend {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.work-type-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.work-type-options .work-type-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #a5b6aa;
+  border-radius: 4px;
+  color: var(--ink);
+  background: #fff;
+  cursor: pointer;
+}
+.work-type-option.checked {
+  border-color: var(--primary);
+  background: #e6f2e9;
+}
+.work-type-option input[type="checkbox"] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--primary);
+}
+.work-type-option span {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.harvest-year-search {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.harvest-year-search label { width: 150px; min-width: 0; }
+.harvest-year-search button { flex: 0 0 auto; }
+.harvest-summary-heading { margin-bottom: 12px; }
+.harvest-summary-item { border-top: 1px solid var(--line); }
+.harvest-summary-item:last-child { border-bottom: 1px solid var(--line); }
+.harvest-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+}
+.harvest-summary-row > div { min-width: 0; }
+.harvest-summary-row h3, .harvest-summary-row h4 { margin: 0 0 6px; overflow-wrap: anywhere; }
+.harvest-summary-row h3 { font-size: 20px; }
+.harvest-summary-row h4 { font-size: 16px; }
+.harvest-summary-row p { margin: 0; overflow-wrap: anywhere; }
+.harvest-summary-title p { font-size: 18px; font-weight: 700; color: #155f9a; }
+.harvest-summary-row button, .harvest-sheet-link { flex: 0 0 auto; }
+.harvest-summary-details { padding: 0 12px 12px; background: #fff; }
+.harvest-sheet-summary + .harvest-sheet-summary { border-top: 1px solid var(--line); margin-top: 16px; }
+.harvest-sheet-status { font-size: 13px; color: var(--primary); }
+.harvest-sheet-status.closed { color: #a3322a; }
+.harvest-sheet-summary .timeline { margin-top: 0; }
 .task-history-grid {
   margin-top: 14px;
 }
