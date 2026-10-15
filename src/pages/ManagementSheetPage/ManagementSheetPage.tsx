@@ -181,7 +181,7 @@ export default function ManagementSheetPage() {
   const [pendingNewPlantId, setPendingNewPlantId] = useState("");
   const [workDate, setWorkDate] = useState(todayIsoDate());
   const [workPlantId, setWorkPlantId] = useState("");
-  const [workTypes, setWorkTypes] = useState<string[]>(["물주기"]);
+  const [workTypes, setWorkTypes] = useState<string[]>([]);
   const [workTypeError, setWorkTypeError] = useState("");
   const [workContent, setWorkContent] = useState("");
   const [workRepeatUnit, setWorkRepeatUnit] = useState<WorkRepeatUnit>("NONE");
@@ -738,6 +738,7 @@ export default function ManagementSheetPage() {
         setRecordPhotoSaving("");
       }
       setPendingWorkLog(null);
+      setWorkTypes([]);
       setWorkPlantId("");
       setWorkContent("");
       setWorkRepeatUnit("NONE");
