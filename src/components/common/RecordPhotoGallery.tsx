@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Photo } from "../../domain/entities/models";
+import type { PhotoTarget } from "../../domain/services/photoRules";
+import PhotoAttachmentButton from "./PhotoAttachmentButton";
 
 function RecordPhotoThumb({ photo, onPreview, onDelete }: { photo: Photo; onPreview: (photo: Photo, url: string) => void; onDelete?: () => void }) {
   const [imageUrl, setImageUrl] = useState("");
@@ -26,10 +28,8 @@ function RecordPhotoThumb({ photo, onPreview, onDelete }: { photo: Photo; onPrev
   );
 }
 
-export default function RecordPhotoGallery({ photos, onDeletePhoto }: { photos: Photo[]; onDeletePhoto?: (photoId: string) => void }) {
+export default function RecordPhotoGallery({ photos, onDeletePhoto, target }: { photos: Photo[]; onDeletePhoto?: (photoId: string) => void; target?: PhotoTarget }) {
   const [previewPhoto, setPreviewPhoto] = useState<{ photo: Photo; url: string } | null>(null);
-
-  if (photos.length === 0) return null;
 
   function onDownloadPreviewPhoto() {
     if (!previewPhoto) return;
@@ -56,6 +56,7 @@ export default function RecordPhotoGallery({ photos, onDeletePhoto }: { photos: 
           />
         ))}
       </div>
+      {target && <PhotoAttachmentButton target={target} />}
       {previewPhoto && (
         <div className="modal-backdrop photo-preview-backdrop" role="presentation" onClick={() => setPreviewPhoto(null)}>
           <div className="photo-preview-panel" role="dialog" aria-modal="true" aria-label="사진 크게 보기" onClick={(event) => event.stopPropagation()}>

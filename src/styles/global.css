@@ -1212,6 +1212,18 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
   grid-template-columns: 68px;
   gap: 4px;
 }
+.photo-attachment-control { margin-top: 8px; }
+.photo-attachment-backdrop { z-index: 100; }
+.photo-attachment-backdrop .modal-panel { display: grid; gap: 16px; }
+.selected-photo-list { display: flex; gap: 10px; flex-wrap: wrap; }
+.selected-photo { width: 86px; display: grid; gap: 4px; }
+.selected-photo img { width: 86px; height: 72px; object-fit: cover; border: 1px solid var(--line); border-radius: 4px; }
+.selected-photo button { padding: 4px; font-size: 12px; }
+.plant-image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+.plant-image-preview-button { min-width: 0; width: 100%; display: block; padding: 0; border: 0; background: transparent; }
+.plant-image-gallery .plant-card-photo { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.plant-image-gallery img { width: 100%; height: 120px; object-fit: contain; }
+.plant-image-gallery .plant-photo-preview-row { display: grid; grid-template-columns: 1fr; gap: 8px; min-width: 0; }
 .record-photo-thumb-button {
   width: 68px;
   height: 52px;

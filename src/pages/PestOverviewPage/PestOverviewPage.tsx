@@ -70,7 +70,7 @@ export default function PestOverviewPage() {
                         {item.symptom ? `: ${item.symptom}` : ""}
                         {item.action ? ` / ${item.action}` : ""}
                       </p>
-                      <RecordPhotoGallery photos={photosForRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
+                      <RecordPhotoGallery target={{ recordType: "PEST", recordId: item.id }} photos={photosForRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                     </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}>
                       <Trash2 size={16} /> 삭제

@@ -7,7 +7,7 @@ export type CloudSnapshot = Omit<SerializedAppData, "photos" | "backgroundImages
   _cloudStorageVersion?: number;
   photos: (SerializedAppData["photos"][number] & { imagePath?: string; thumbnailPath?: string })[];
   backgroundImages: (SerializedAppData["backgroundImages"][number] & { imagePath?: string | null; thumbnailPath?: string | null })[];
-  plants: (SerializedAppData["plants"][number] & { imagePath?: string })[];
+  plants: (Omit<SerializedAppData["plants"][number], "additionalImages"> & { imagePath?: string; additionalImages?: (NonNullable<AppData["plants"][number]["additionalImages"]>[number] & { imagePath?: string })[] })[];
 };
 
 export interface CollectionChange {
@@ -89,16 +89,20 @@ export class CloudImages {
       ...image, imageBlobDataUrl: null, thumbnailBlobDataUrl: null,
       imagePath: await this.upload(imageBlob), thumbnailPath: await this.upload(thumbnailBlob)
     }));
-    const plants = await mapImages(data.plants, async (plant) => {
-      if (!plant.imageDataUrl) return { ...plant };
-      let path = this.plantPaths.get(plant.imageDataUrl);
+    const serializePlantImage = async <T extends { imageDataUrl: string }>(image: T) => {
+      if (!image.imageDataUrl) return { ...image };
+      let path = this.plantPaths.get(image.imageDataUrl);
       if (!path) {
-        const blob = dataUrlToBlob(plant.imageDataUrl);
+        const blob = dataUrlToBlob(image.imageDataUrl);
         if (!blob) throw new Error("식물 사진 형식이 올바르지 않습니다.");
         path = (await this.upload(blob))!;
-        this.plantPaths.set(plant.imageDataUrl, path);
+        this.plantPaths.set(image.imageDataUrl, path);
       }
-      return { ...plant, imageDataUrl: "", imagePath: path };
+      return { ...image, imageDataUrl: "", imagePath: path };
+    };
+    const plants = await mapImages(data.plants, async ({ additionalImages, ...plant }) => {
+      const primary = await serializePlantImage(plant);
+      return { ...primary, ...(additionalImages ? { additionalImages: await mapImages(additionalImages, serializePlantImage) } : {}) };
     });
     return { ...data, photos, backgroundImages, plants, _cloudStorageVersion: 3 };
   }
@@ -115,11 +119,15 @@ export class CloudImages {
       imageBlob: imagePath ? await this.download(imagePath) : dataUrlToBlob(imageBlobDataUrl),
       thumbnailBlob: thumbnailPath ? await this.download(thumbnailPath) : dataUrlToBlob(thumbnailBlobDataUrl)
     }));
-    const plants = await mapImages(data.plants, async ({ imagePath, ...plant }) => {
-      if (!imagePath) return plant;
+    const deserializePlantImage = async <T extends { imageDataUrl: string; imagePath?: string }>({ imagePath, ...image }: T) => {
+      if (!imagePath) return image;
       const imageDataUrl = (await blobToDataUrl(await this.download(imagePath)))!;
       this.plantPaths.set(imageDataUrl, imagePath);
-      return { ...plant, imageDataUrl };
+      return { ...image, imageDataUrl };
+    };
+    const plants = await mapImages(data.plants, async ({ additionalImages, ...plant }) => {
+      const primary = await deserializePlantImage(plant);
+      return { ...primary, ...(additionalImages ? { additionalImages: await mapImages(additionalImages, deserializePlantImage) } : {}) };
     });
     return { ...data, photos, backgroundImages, plants };
   }

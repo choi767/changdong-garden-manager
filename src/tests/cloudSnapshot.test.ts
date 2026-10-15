@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createInitialData } from "../domain/services/seedData";
 import { CloudImages, diffSnapshots, type CloudSnapshot } from "../infrastructure/repositories/cloudSnapshot";
 import { serializeAppData } from "../infrastructure/repositories/appDataSerialization";
+import { harvestTestData } from "./fixtures/harvestData";
+import { getPlantImages, plantImageFields } from "../domain/services/photoRules";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -28,6 +30,35 @@ function addPhoto(data: ReturnType<typeof createInitialData>, id: string, value:
 }
 
 describe("incremental cloud storage", () => {
+  it("stores all three plant photos outside the database and includes real bytes in backups", async () => {
+    const NativeBlob = Blob;
+    vi.stubGlobal("Blob", class extends NativeBlob {
+      arrayBuffer(): Promise<ArrayBuffer> {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as ArrayBuffer);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsArrayBuffer(this);
+        });
+      }
+    });
+    const { images, upload } = setupStorage();
+    await images.serialize(createInitialData());
+    expect(upload).not.toHaveBeenCalled();
+    const data = harvestTestData();
+    Object.assign(data.plants[0], plantImageFields(["AQ==", "Ag==", "Aw=="].map((value) => ({ imageDataUrl: `data:image/jpeg;base64,${value}`, imageMimeType: "image/jpeg", imageFileSize: 1 }))));
+    const snapshot = await images.serialize(data);
+    expect(upload).toHaveBeenCalledTimes(3);
+    expect(snapshot.plants[0].imageDataUrl).toBe("");
+    expect(snapshot.plants[0].additionalImages?.every((item) => item.imageDataUrl === "" && item.imagePath)).toBe(true);
+    const restored = await images.deserialize(snapshot);
+    expect(getPlantImages(restored.plants[0]).map((item) => item.imageDataUrl)).toEqual(getPlantImages(data.plants[0]).map((item) => item.imageDataUrl));
+    const backup = await serializeAppData(restored);
+    expect(JSON.stringify(backup.plants[0])).not.toContain("imagePath");
+    expect(backup.plants[0].additionalImages).toHaveLength(2);
+    await images.serialize(restored);
+    expect(upload).toHaveBeenCalledTimes(3);
+  });
   it("sends only added, edited and deleted records", async () => {
     const before = await serializeAppData(createInitialData());
     const after = structuredClone(before);

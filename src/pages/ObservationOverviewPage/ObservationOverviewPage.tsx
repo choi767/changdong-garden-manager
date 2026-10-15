@@ -68,7 +68,7 @@ export default function ObservationOverviewPage() {
                       <p>
                         {item.observedDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)} · {item.content}
                       </p>
-                      <RecordPhotoGallery photos={photosForRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
+                      <RecordPhotoGallery target={{ recordType: "OBSERVATION", recordId: item.id }} photos={photosForRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                     </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}>
                       <Trash2 size={16} /> 삭제

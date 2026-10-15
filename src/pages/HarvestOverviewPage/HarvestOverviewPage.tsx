@@ -92,7 +92,7 @@ export default function HarvestOverviewPage() {
                           <div className="timeline-item" key={item.id}>
                             <div>
                               <p>{item.harvestDate} · {item.quantity}{item.unit} {item.quality}{item.notes ? `: ${item.notes}` : ""}</p>
-                              <RecordPhotoGallery photos={appData.photos.filter((photo) => photo.recordType === "HARVEST" && photo.recordId === item.id)} onDeletePhoto={(id) => void onDelete(id, true)} />
+                              <RecordPhotoGallery target={{ recordType: "HARVEST", recordId: item.id }} photos={appData.photos.filter((photo) => photo.recordType === "HARVEST" && photo.recordId === item.id)} onDeletePhoto={(id) => void onDelete(id, true)} />
                             </div>
                             <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}><Trash2 size={16} /> 삭제</button>
                           </div>

@@ -58,6 +58,12 @@ export interface ManagementGroupBedMembership {
   updatedAt: string;
 }
 
+export interface PlantImage {
+  imageDataUrl: string;
+  imageMimeType: string;
+  imageFileSize: number;
+}
+
 export interface Plant {
   id: string;
   name: string;
@@ -80,6 +86,7 @@ export interface Plant {
   imageDataUrl: string;
   imageMimeType: string;
   imageFileSize: number;
+  additionalImages?: PlantImage[];
   author: string;
   createdAt: string;
   updatedAt: string;
@@ -139,6 +146,7 @@ export interface HarvestRecord {
 
 export interface Photo {
   id: string;
+  albumId?: string;
   managementSheetId: string;
   managementSheetPlantId: string | null;
   recordType: "WORK" | "OBSERVATION" | "PEST" | "HARVEST" | null;

@@ -1,8 +1,9 @@
 import { create } from "zustand";
-import type { AppData, Bed, HarvestRecord, ManagementGroup, ManagementSheet, ManagementSheetPlant, MaterialUsage, ObservationMemo, PestRecord, Photo, Plant, ScheduleReminder, SheetEvaluation, StatusHistory, WorkLog } from "../domain/entities/models";
+import type { AppData, Bed, HarvestRecord, ManagementGroup, ManagementSheet, ManagementSheetPlant, MaterialUsage, ObservationMemo, PestRecord, Photo, Plant, PlantImage, ScheduleReminder, SheetEvaluation, StatusHistory, WorkLog } from "../domain/entities/models";
 import { createGardenRepository } from "../infrastructure/repositories/gardenRepositoryFactory";
 import { readStoredSnapshot, writeSnapshot } from "../infrastructure/database/gardenDb";
 import { createInitialData } from "../domain/services/seedData";
+import { assertPhotoLimit, getPlantImages, plantImageFields, photosForTarget, type PhotoTarget } from "../domain/services/photoRules";
 import { ensureZone6 } from "../domain/services/zone6";
 import { getActiveGroupForBed, getCurrentMemberships, getNextGroupNumber, validateAddBedsToGroup, validateGroupBedSelection, validateRemoveBedsFromGroup } from "../domain/services/groupRules";
 import { normalizePlantName, validateAddSheetPlant, validateNewPlantName } from "../domain/services/plantRules";
@@ -47,6 +48,7 @@ type PlantFormInput = Pick<
   | "watering"
   | "sunlight"
   | "notes"
+  | "additionalImages"
   | "imageDataUrl"
   | "imageMimeType"
   | "imageFileSize"
@@ -61,7 +63,7 @@ type SheetPlantFormInput = Pick<
 type ScheduleReminderInput = Pick<ScheduleReminder, "managementSheetId" | "managementSheetPlantId" | "dueDate" | "category" | "content">;
 type ObservationMemoInput = Pick<ObservationMemo, "managementSheetId" | "managementSheetPlantId" | "observedDate" | "content">;
 type PestRecordInput = Pick<PestRecord, "managementSheetId" | "managementSheetPlantId" | "detectedDate" | "pestType" | "severity" | "symptom" | "action">;
-type PhotoInput = Pick<Photo, "managementSheetId" | "managementSheetPlantId" | "imageBlob" | "thumbnailBlob" | "mimeType" | "fileSize" | "description" | "photoDate"> & Partial<Pick<Photo, "recordType" | "recordId">>;
+type PhotoInput = Pick<Photo, "managementSheetId" | "managementSheetPlantId" | "imageBlob" | "thumbnailBlob" | "mimeType" | "fileSize" | "description" | "photoDate"> & Partial<Pick<Photo, "recordType" | "recordId" | "albumId">>;
 type AttachedPhotoInput = Omit<PhotoInput, "managementSheetId" | "managementSheetPlantId" | "recordType" | "recordId">;
 type MaterialUsageInput = Pick<MaterialUsage, "managementSheetId" | "usedDate" | "itemName" | "quantity" | "unit" | "cost" | "memo">;
 type SheetEvaluationInput = Pick<SheetEvaluation, "managementSheetId" | "rating" | "summary" | "improvement" | "evaluatedAt">;
@@ -86,6 +88,8 @@ interface GardenState {
   restoreManagement: (sheetId: string) => Promise<void>;
   addPlant: (input: PlantFormInput) => Promise<void>;
   updatePlant: (plantId: string, input: PlantFormInput) => Promise<void>;
+  appendPlantImages: (plantId: string, images: PlantImage[]) => Promise<void>;
+  deletePlantImage: (plantId: string, imageDataUrl: string) => Promise<void>;
   deletePlant: (plantId: string) => Promise<void>;
   replacePlants: (plants: Plant[]) => Promise<void>;
   mergePlants: (plants: Plant[]) => Promise<void>;
@@ -93,21 +97,23 @@ interface GardenState {
   addPlantToSheetWithCultivation: (sheetId: string, plantId: string, input: SheetPlantFormInput) => Promise<void>;
   updateSheetPlant: (sheetPlantId: string, input: SheetPlantFormInput) => Promise<void>;
   stopSheetPlant: (sheetPlantId: string) => Promise<void>;
-  addWorkLog: (input: Pick<WorkLog, "managementSheetId" | "managementSheetPlantId" | "workDate" | "workType" | "content" | "author">, photo?: AttachedPhotoInput) => Promise<WorkLog>;
+  addWorkLog: (input: Pick<WorkLog, "managementSheetId" | "managementSheetPlantId" | "workDate" | "workType" | "content" | "author">, photo?: AttachedPhotoInput | AttachedPhotoInput[]) => Promise<WorkLog>;
   deleteWorkLog: (workLogId: string) => Promise<void>;
-  addZoneWorkLog: (zoneId: string, workDate: string, workType: string, content: string, photo?: AttachedPhotoInput) => Promise<WorkLog[]>;
-  addHarvestRecord: (input: Pick<HarvestRecord, "managementSheetId" | "managementSheetPlantId" | "harvestDate" | "quantity" | "unit" | "quality" | "notes">, photo?: AttachedPhotoInput) => Promise<HarvestRecord>;
+  addZoneWorkLog: (zoneId: string, workDate: string, workType: string, content: string, photo?: AttachedPhotoInput | AttachedPhotoInput[]) => Promise<WorkLog[]>;
+  addHarvestRecord: (input: Pick<HarvestRecord, "managementSheetId" | "managementSheetPlantId" | "harvestDate" | "quantity" | "unit" | "quality" | "notes">, photo?: AttachedPhotoInput | AttachedPhotoInput[]) => Promise<HarvestRecord>;
   deleteHarvestRecord: (harvestRecordId: string) => Promise<void>;
   addPhoto: (input: PhotoInput) => Promise<Photo>;
+  addPhotos: (inputs: PhotoInput[]) => Promise<Photo[]>;
+  appendRecordPhotos: (target: PhotoTarget, photos: AttachedPhotoInput[]) => Promise<void>;
   deletePhoto: (photoId: string) => Promise<void>;
   addScheduleReminder: (input: ScheduleReminderInput) => Promise<void>;
   addZoneScheduleReminder: (zoneId: string, dueDate: string, category: string, content: string) => Promise<void>;
   completeScheduleReminder: (reminderId: string, scope?: "single" | "batch") => Promise<void>;
   toggleScheduleReminder: (reminderId: string) => Promise<void>;
   deleteScheduleReminder: (reminderId: string, scope?: "single" | "batch") => Promise<void>;
-  addObservationMemo: (input: ObservationMemoInput, photo?: AttachedPhotoInput) => Promise<ObservationMemo>;
+  addObservationMemo: (input: ObservationMemoInput, photo?: AttachedPhotoInput | AttachedPhotoInput[]) => Promise<ObservationMemo>;
   deleteObservationMemo: (memoId: string) => Promise<void>;
-  addPestRecord: (input: PestRecordInput, photo?: AttachedPhotoInput) => Promise<PestRecord>;
+  addPestRecord: (input: PestRecordInput, photo?: AttachedPhotoInput | AttachedPhotoInput[]) => Promise<PestRecord>;
   deletePestRecord: (pestRecordId: string) => Promise<void>;
   addMaterialUsage: (input: MaterialUsageInput) => Promise<void>;
   deleteMaterialUsage: (materialUsageId: string) => Promise<void>;
@@ -247,6 +253,12 @@ async function persistMutation<T>(
 function requireData(data: AppData | null): AppData {
   if (!data) throw new Error("데이터를 불러오는 중입니다.");
   return cloneData(data);
+}
+
+function attachedPhotos(input?: AttachedPhotoInput | AttachedPhotoInput[]): AttachedPhotoInput[] {
+  const photos = input ? (Array.isArray(input) ? input : [input]) : [];
+  if (photos.length) assertPhotoLimit(0, photos.length);
+  return photos;
 }
 
 function makeAttachedPhoto(
@@ -507,6 +519,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     const data = requireData(get().data);
     const validation = validateNewPlantName(data.plants, input.name);
     if (validation) throw new Error(validation);
+    if (getPlantImages(input).length > 3) throw new Error("식물 사진은 최대 3장까지 등록할 수 있습니다.");
     const timestamp = nowIso();
     data.plants.push({
       id: makeId("plant"),
@@ -527,6 +540,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       watering: input.watering,
       sunlight: input.sunlight,
       notes: input.notes,
+      additionalImages: input.additionalImages ?? [],
       imageDataUrl: input.imageDataUrl,
       imageMimeType: input.imageMimeType,
       imageFileSize: input.imageFileSize,
@@ -546,6 +560,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     if (data.plants.some((item) => item.id !== plantId && item.normalizedName === normalizedName)) {
       throw new Error("동일한 식물명이 이미 등록되어 있습니다.");
     }
+    if (getPlantImages(input).length > 3) throw new Error("식물 사진은 최대 3장까지 등록할 수 있습니다.");
     Object.assign(plant, {
       ...input,
       name: input.name.trim(),
@@ -554,6 +569,28 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       updatedAt: nowIso()
     });
     await persist(set, data, "수정했습니다.");
+  },
+
+  async appendPlantImages(plantId, images) {
+    await persistMutation(set, () => get().data, "식물 사진을 추가했습니다.", (data) => {
+      const plant = data.plants.find((item) => item.id === plantId);
+      if (!plant) throw new Error("식물을 찾을 수 없습니다.");
+      const existing = getPlantImages(plant);
+      assertPhotoLimit(existing.length, images.length);
+      Object.assign(plant, plantImageFields([...existing, ...images]), { updatedAt: nowIso() });
+    });
+  },
+
+  async deletePlantImage(plantId, imageDataUrl) {
+    await persistMutation(set, () => get().data, "사진을 삭제했습니다.", (data) => {
+      const plant = data.plants.find((item) => item.id === plantId);
+      if (!plant) throw new Error("식물을 찾을 수 없습니다.");
+      const images = getPlantImages(plant);
+      const index = images.findIndex((image) => image.imageDataUrl === imageDataUrl);
+      if (index < 0) throw new Error("사진을 찾을 수 없습니다.");
+      images.splice(index, 1);
+      Object.assign(plant, plantImageFields(images), { updatedAt: nowIso() });
+    });
   },
 
   async deletePlant(plantId) {
@@ -641,6 +678,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
         imageDataUrl: plant.imageDataUrl || existing.imageDataUrl,
         imageMimeType: plant.imageDataUrl ? plant.imageMimeType : existing.imageMimeType,
         imageFileSize: plant.imageDataUrl ? plant.imageFileSize : existing.imageFileSize,
+        additionalImages: plant.additionalImages ?? existing.additionalImages,
         author: plant.author || existing.author || "사용자",
         updatedAt: timestamp
       });
@@ -731,8 +769,8 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       const timestamp = nowIso();
       const record = { ...input, id: makeId("work"), batchId: null, createdAt: timestamp, updatedAt: timestamp };
       data.workLogs.push(record);
-      if (photo) {
-        data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "WORK", record.id));
+      for (const item of attachedPhotos(photo)) {
+        data.photos.push(makeAttachedPhoto(item, input.managementSheetId, input.managementSheetPlantId, "WORK", record.id));
       }
       return record;
     });
@@ -771,8 +809,8 @@ export const useGardenStore = create<GardenState>((set, get) => ({
         };
         data.workLogs.push(record);
         records.push(record);
-        if (photo) {
-          data.photos.push(makeAttachedPhoto(photo, sheet.id, null, "WORK", record.id));
+        for (const item of attachedPhotos(photo)) {
+          data.photos.push(makeAttachedPhoto(item, sheet.id, null, "WORK", record.id));
         }
       }
       return records;
@@ -784,8 +822,8 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       const timestamp = nowIso();
       const record = { ...input, id: makeId("harvest"), createdAt: timestamp, updatedAt: timestamp };
       data.harvestRecords.push(record);
-      if (photo) {
-        data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "HARVEST", record.id));
+      for (const item of attachedPhotos(photo)) {
+        data.photos.push(makeAttachedPhoto(item, input.managementSheetId, input.managementSheetPlantId, "HARVEST", record.id));
       }
       return record;
     });
@@ -801,15 +839,48 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   async addPhoto(input) {
+    if (input.recordType && input.recordId) {
+      const target = { recordType: input.recordType, recordId: input.recordId };
+      await get().appendRecordPhotos(target, [input]);
+      return photosForTarget(get().data!.photos, target).slice(-1)[0];
+    }
+    return (await get().addPhotos([input]))[0];
+  },
+
+  async addPhotos(inputs) {
+    const albumId = inputs[0]?.albumId ?? makeId("album");
     return persistMutation(set, () => get().data, "사진을 저장했습니다.", (data) => {
-      const sheet = data.managementSheets.find((item) => item.id === input.managementSheetId);
+      assertPhotoLimit(photosForTarget(data.photos, { recordType: null, recordId: albumId }).length, inputs.length);
+      const first = inputs[0];
+      const sheet = data.managementSheets.find((item) => item.id === first.managementSheetId);
       if (!sheet) throw new Error("존재하지 않는 관리표입니다.");
-      if (input.managementSheetPlantId && !data.sheetPlants.some((item) => item.id === input.managementSheetPlantId && item.managementSheetId === input.managementSheetId)) {
-        throw new Error("관리표에 연결된 식물을 찾을 수 없습니다.");
+      if (inputs.some((item) => item.managementSheetId !== first.managementSheetId)) throw new Error("같은 관리표의 사진만 함께 저장할 수 있습니다.");
+      const photos = inputs.map((input) => ({ ...input, albumId, recordType: null, recordId: null, id: makeId("photo"), createdAt: nowIso() }));
+      data.photos.push(...photos);
+      return photos;
+    });
+  },
+
+  async appendRecordPhotos(target, inputs) {
+    await persistMutation(set, () => get().data, "사진을 추가했습니다.", (data) => {
+      const existing = photosForTarget(data.photos, target);
+      assertPhotoLimit(existing.length, inputs.length);
+      if (target.recordType) {
+        const records = target.recordType === "WORK" ? data.workLogs
+          : target.recordType === "OBSERVATION" ? data.observationMemos
+          : target.recordType === "PEST" ? data.pestRecords : data.harvestRecords;
+        const record = records.find((item) => item.id === target.recordId);
+        if (!record) throw new Error("사진을 추가할 기록을 찾을 수 없습니다.");
+        for (const input of inputs) data.photos.push(makeAttachedPhoto(input, record.managementSheetId, record.managementSheetPlantId, target.recordType, record.id));
+      } else {
+        const original = existing[0];
+        if (!original) throw new Error("사진기록을 찾을 수 없습니다.");
+        for (const input of inputs) data.photos.push({
+          ...input, id: makeId("photo"), albumId: target.recordId, recordType: null, recordId: null,
+          managementSheetId: original.managementSheetId, managementSheetPlantId: original.managementSheetPlantId,
+          createdAt: nowIso()
+        });
       }
-      const photo = { ...input, recordType: input.recordType ?? null, recordId: input.recordId ?? null, id: makeId("photo"), createdAt: nowIso() };
-      data.photos.push(photo);
-      return photo;
     });
   },
 
@@ -916,8 +987,8 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       const timestamp = nowIso();
       const memo = { ...input, id: makeId("observation"), createdAt: timestamp, updatedAt: timestamp };
       data.observationMemos.push(memo);
-      if (photo) {
-        data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "OBSERVATION", memo.id));
+      for (const item of attachedPhotos(photo)) {
+        data.photos.push(makeAttachedPhoto(item, input.managementSheetId, input.managementSheetPlantId, "OBSERVATION", memo.id));
       }
       return memo;
     });
@@ -937,8 +1008,8 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       const timestamp = nowIso();
       const record = { ...input, id: makeId("pest"), createdAt: timestamp, updatedAt: timestamp };
       data.pestRecords.push(record);
-      if (photo) {
-        data.photos.push(makeAttachedPhoto(photo, input.managementSheetId, input.managementSheetPlantId, "PEST", record.id));
+      for (const item of attachedPhotos(photo)) {
+        data.photos.push(makeAttachedPhoto(item, input.managementSheetId, input.managementSheetPlantId, "PEST", record.id));
       }
       return record;
     });

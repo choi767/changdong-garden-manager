@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import type { Photo } from "../../domain/entities/models";
 import { getSheetPlantDisplayName } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
+import PhotoAttachmentButton from "../../components/common/PhotoAttachmentButton";
 
 function PhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (photo: Photo, url: string) => void }) {
   const [imageUrl, setImageUrl] = useState("");
@@ -89,10 +90,12 @@ export default function PhotoOverviewPage() {
                 return (
                   <div className="timeline-item overview-photo-item" key={item.id}>
                     <PhotoThumb photo={item} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
-                    <p>
+                    <div><p>
                       {item.photoDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)}
                       {item.description ? ` · ${item.description}` : ""}
                     </p>
+                    {(!item.recordType || item.recordId) && <PhotoAttachmentButton target={{ recordType: item.recordType, recordId: item.recordType ? item.recordId! : item.albumId ?? item.id }} />}
+                    </div>
                     <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}>
                       <Trash2 size={16} /> 사진삭제
                     </button>

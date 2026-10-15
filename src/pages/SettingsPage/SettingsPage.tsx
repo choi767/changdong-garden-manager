@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Download, RefreshCcw, Trash2, Upload } from "lucide-react";
-import type { Plant, PlantCategory } from "../../domain/entities/models";
+import type { Plant, PlantCategory, PlantImage } from "../../domain/entities/models";
 import { sunlightLabel, type Sunlight } from "../../domain/enums/status";
 import { getSupabaseClient } from "../../infrastructure/supabaseClient";
 import { useGardenStore } from "../../stores/gardenStore";
@@ -32,7 +32,8 @@ const PLANT_EXCEL_COLUMNS = [
   "등록자/수정자",
   "사진데이터",
   "사진형식",
-  "사진크기"
+  "사진크기",
+  "추가사진데이터"
 ] as const;
 
 const plantCategoryLabel: Record<PlantCategory, string> = {
@@ -107,7 +108,8 @@ function exportPlantsCsv(plants: Plant[]): string {
       plant.author,
       plant.imageDataUrl,
       plant.imageMimeType,
-      plant.imageFileSize
+      plant.imageFileSize,
+      JSON.stringify(plant.additionalImages ?? [])
     ].map(csvCell).join(","))
   ];
   return `\uFEFF${rows.join("\r\n")}`;
@@ -155,10 +157,20 @@ function parsePlantsCsv(text: string): Plant[] {
     imageDataUrl: get(row, "사진데이터"),
     imageMimeType: get(row, "사진형식"),
     imageFileSize: Number(get(row, "사진크기")) || 0,
+    additionalImages: parseAdditionalImages(get(row, "추가사진데이터")),
     author: get(row, "등록자/수정자") || "사용자",
     createdAt: get(row, "최초등록일"),
     updatedAt: get(row, "최종수정일")
   }));
+}
+
+function parseAdditionalImages(value: string): PlantImage[] | undefined {
+  if (!value.trim()) return undefined;
+  const images: unknown = JSON.parse(value);
+  if (!Array.isArray(images) || images.length > 2 || images.some((image) => !image || typeof image.imageDataUrl !== "string" || typeof image.imageMimeType !== "string" || typeof image.imageFileSize !== "number")) {
+    throw new Error("식물DB 추가 사진 데이터가 올바르지 않습니다.");
+  }
+  return images;
 }
 
 export default function SettingsPage() {

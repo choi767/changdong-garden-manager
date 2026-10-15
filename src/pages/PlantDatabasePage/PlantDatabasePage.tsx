@@ -1,9 +1,11 @@
 import { FormEvent, KeyboardEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Edit3, Plus, Trash2, X } from "lucide-react";
 import { sunlightLabel, type Sunlight } from "../../domain/enums/status";
-import type { Plant, PlantCategory } from "../../domain/entities/models";
+import type { Plant, PlantCategory, PlantImage } from "../../domain/entities/models";
 import { MAX_PLANTS } from "../../domain/services/plantRules";
 import { useGardenStore } from "../../stores/gardenStore";
+import { getPlantImages, plantImageFields } from "../../domain/services/photoRules";
+import { validatePhotoFiles } from "../../utils/recordPhotos";
 
 interface PlantFormState {
   name: string;
@@ -25,6 +27,7 @@ interface PlantFormState {
   imageDataUrl: string;
   imageMimeType: string;
   imageFileSize: number;
+  additionalImages: PlantImage[];
   author: string;
 }
 
@@ -52,6 +55,7 @@ const emptyForm: PlantFormState = {
   imageDataUrl: "",
   imageMimeType: "",
   imageFileSize: 0,
+  additionalImages: [],
   author: ""
 };
 
@@ -83,6 +87,7 @@ function toForm(plant: Plant): PlantFormState {
     imageDataUrl: plant.imageDataUrl ?? "",
     imageMimeType: plant.imageMimeType ?? "",
     imageFileSize: plant.imageFileSize ?? 0,
+    additionalImages: plant.additionalImages ?? [],
     author: plant.author || "사용자"
   };
 }
@@ -125,12 +130,14 @@ export default function PlantDatabasePage() {
   const data = useGardenStore((state) => state.data);
   const addPlant = useGardenStore((state) => state.addPlant);
   const updatePlant = useGardenStore((state) => state.updatePlant);
+  const deletePlantImage = useGardenStore((state) => state.deletePlantImage);
   const deletePlant = useGardenStore((state) => state.deletePlant);
   const [searchText, setSearchText] = useState("");
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<PlantCategory>("CROP");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PlantFormState>(emptyForm);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [photoInputKey, setPhotoInputKey] = useState(0);
   const [photoUploadStatus, setPhotoUploadStatus] = useState<"idle" | "processing" | "done">("idle");
   const [savingMessage, setSavingMessage] = useState("");
@@ -203,27 +210,26 @@ export default function PlantDatabasePage() {
     });
   }
 
-  async function onPhotoChange(file: File | undefined) {
-    if (!file) return;
+  async function onPhotoChange(files: File[]) {
+    if (!files.length) return;
     setError("");
     setPhotoUploadStatus("processing");
     try {
-      const compressed = await compressPlantPhoto(file);
-      setForm((prev) => ({ ...prev, ...compressed }));
+      validatePhotoFiles(files, getPlantImages(form).length);
+      const compressed: PlantImage[] = [];
+      for (const file of files) compressed.push(await compressPlantPhoto(file));
+      setForm((prev) => ({ ...prev, ...plantImageFields([...getPlantImages(prev), ...compressed]) }));
       setPhotoUploadStatus("done");
-      window.setTimeout(() => {
-        submitButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 0);
+      window.setTimeout(() => submitButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "사진 등록에 실패했습니다.");
+      setError(err instanceof Error ? err.message : "사진 선택에 실패했습니다.");
+      window.alert(err instanceof Error ? err.message : "사진 선택에 실패했습니다.");
       setPhotoUploadStatus("idle");
-    } finally {
-      setPhotoInputKey((prev) => prev + 1);
-    }
+    } finally { setPhotoInputKey((prev) => prev + 1); }
   }
 
-  function removePhoto() {
-    setForm((prev) => ({ ...prev, imageDataUrl: "", imageMimeType: "", imageFileSize: 0 }));
+  function removePhoto(index: number) {
+    setForm((prev) => ({ ...prev, ...plantImageFields(getPlantImages(prev).filter((_, current) => current !== index)) }));
     setPhotoInputKey((prev) => prev + 1);
     setPhotoUploadStatus("idle");
   }
@@ -282,28 +288,22 @@ export default function PlantDatabasePage() {
     }
   }
 
-  async function onDeletePlantPhoto(plant: Plant) {
-    const confirmed = window.confirm(`${plant.name} 식물의 사진만 삭제하시겠습니까?\n식물DB 정보는 그대로 유지됩니다.`);
-    if (!confirmed) return;
+  async function onDeletePlantPhoto(plant: Plant, imageDataUrl: string) {
+    if (!window.confirm(`${plant.name} 식물의 이 사진만 삭제하시겠습니까?`)) return;
     setError("");
     setSavingMessage("식물DB 사진 삭제 중입니다... 잠시 기다려 주세요");
     try {
-      await updatePlant(plant.id, {
-        ...toForm(plant),
-        imageDataUrl: "",
-        imageMimeType: "",
-        imageFileSize: 0
-      });
+      await deletePlantImage(plant.id, imageDataUrl);
       if (editingId === plant.id) {
-        setForm((prev) => ({ ...prev, imageDataUrl: "", imageMimeType: "", imageFileSize: 0 }));
-        setPhotoInputKey((prev) => prev + 1);
-        setPhotoUploadStatus("idle");
+        setForm((prev) => {
+          const images = getPlantImages(prev);
+          const index = images.findIndex((image) => image.imageDataUrl === imageDataUrl);
+          if (index >= 0) images.splice(index, 1);
+          return { ...prev, ...plantImageFields(images) };
+        });
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "식물 사진 삭제에 실패했습니다.");
-    } finally {
-      setSavingMessage("");
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : "사진 삭제에 실패했습니다."); }
+    finally { setSavingMessage(""); }
   }
 
   function plantCards(plants: Plant[]): ReactNode {
@@ -346,17 +346,19 @@ export default function PlantDatabasePage() {
             </dl>
             <details className="db-details">
               <summary className="secondary-button db-toggle">사진보기</summary>
-              {plant.imageDataUrl ? (
-                <div className="plant-card-photo">
-                  <img src={plant.imageDataUrl} alt={`${plant.name} 사진`} />
-                  <div>
-                    <span>{formatFileSize(plant.imageFileSize)}</span>
-                    <button className="danger-button compact-action" type="button" onClick={() => void onDeletePlantPhoto(plant)} disabled={Boolean(savingMessage)}>사진삭제</button>
+              <div className="plant-image-gallery">
+                {getPlantImages(plant).map((image, index) => (
+                  <div className="plant-card-photo" key={index}>
+                    <button type="button" className="plant-image-preview-button" onClick={() => setPreviewImage(image.imageDataUrl)} aria-label={`${plant.name} 사진 ${index + 1} 크게 보기`}><img src={image.imageDataUrl} alt={`${plant.name} 사진 ${index + 1}`} /></button>
+                    <div><span>{formatFileSize(image.imageFileSize)}</span><button className="danger-button compact-action" type="button" onClick={() => void onDeletePlantPhoto(plant, image.imageDataUrl)} disabled={Boolean(savingMessage)}>사진삭제</button></div>
                   </div>
-                </div>
-              ) : (
-                <p className="empty-text">등록된 사진이 없습니다.</p>
-              )}
+                ))}
+              </div>
+              {getPlantImages(plant).length === 0 && <p className="empty-text">등록된 사진이 없습니다.</p>}
+              {getPlantImages(plant).length < 3 && <button className="secondary-button compact-action" type="button" onClick={() => {
+                startEdit(plant);
+                window.setTimeout(() => formRef.current?.querySelector(".plant-photo-field")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+              }}>사진추가 ({getPlantImages(plant).length}/3)</button>}
             </details>
           </article>
         ))}
@@ -366,6 +368,7 @@ export default function PlantDatabasePage() {
 
   return (
     <div className="page" ref={pageTopRef}>
+      {previewImage && <div className="modal-backdrop photo-preview-backdrop" onClick={() => setPreviewImage(null)}><div className="photo-preview-panel" role="dialog" aria-modal="true" aria-label="식물 사진 크게 보기" onClick={(event) => event.stopPropagation()}><button className="secondary-button" type="button" onClick={() => setPreviewImage(null)}>닫기</button><img src={previewImage} alt="식물 사진" /></div></div>}
       {savingMessage && <div className="saving-popup" role="status" aria-live="assertive">{savingMessage}</div>}
       <header className="page-header">
         <div>
@@ -498,23 +501,21 @@ export default function PlantDatabasePage() {
           </label>
           <div className="span-2 plant-photo-field">
             <label className="plant-photo-upload-label">
-              사진 등록
+              사진 등록 ({getPlantImages(form).length}/3)
               <span className={`secondary-button plant-photo-upload-button ${photoUploadStatus === "done" ? "upload-done" : ""}`}>
-                {photoUploadStatus === "processing" ? "사진 처리중..." : photoUploadStatus === "done" ? "등록완료" : "파일/갤러리/구글포토 선택"}
+                {photoUploadStatus === "processing" ? "사진 처리중..." : photoUploadStatus === "done" ? "사진 선택됨" : "파일/갤러리/구글포토 선택"}
               </span>
-              <input key={photoInputKey} className="visually-hidden-file" type="file" accept={PLANT_PHOTO_ACCEPT} disabled={photoUploadStatus === "processing" || Boolean(savingMessage)} onChange={(event) => void onPhotoChange(event.target.files?.[0])} />
+              <input key={photoInputKey} className="visually-hidden-file" type="file" multiple accept={PLANT_PHOTO_ACCEPT} disabled={photoUploadStatus === "processing" || Boolean(savingMessage) || getPlantImages(form).length >= 3} onChange={(event) => void onPhotoChange(Array.from(event.target.files ?? []))} />
             </label>
             <p className="hint">PC에서는 파일을, 휴대폰에서는 갤러리 또는 구글포토를 선택하세요. 사진은 긴 변 {PLANT_PHOTO_MAX_SIDE}px 이하 JPEG로 압축합니다.</p>
-            {form.imageDataUrl && (
-              <div className="plant-photo-preview-row">
-                <img src={form.imageDataUrl} alt={`${form.name || "식물"} 사진 미리보기`} />
-                <div>
-                  <strong>등록된 사진</strong>
-                  <p>{formatFileSize(form.imageFileSize)} · 긴 변 {PLANT_PHOTO_MAX_SIDE}px 이하 JPEG 압축</p>
-                  <button className="secondary-button compact-action" type="button" onClick={removePhoto}>사진 삭제</button>
+            <div className="plant-image-gallery">
+              {getPlantImages(form).map((image, index) => (
+                <div className="plant-photo-preview-row" key={index}>
+                  <img src={image.imageDataUrl} alt={`${form.name || "식물"} 사진 ${index + 1} 미리보기`} />
+                  <div><strong>사진 {index + 1}</strong><p>{formatFileSize(image.imageFileSize)}</p><button className="secondary-button compact-action" type="button" onClick={() => removePhoto(index)}>사진 삭제</button></div>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         </div>
 

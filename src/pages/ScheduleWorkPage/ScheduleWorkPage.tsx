@@ -157,7 +157,7 @@ export default function ScheduleWorkPage() {
                         <p>
                           {item.workDate} · {recordTargetNode(item, appData.workLogs)} · {plantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
                         </p>
-                        <RecordPhotoGallery photos={photosForWorkRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
+                        <RecordPhotoGallery target={{ recordType: "WORK", recordId: item.id }} photos={photosForWorkRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                       </div>
                       <button className="danger-button compact-action" type="button" onClick={() => void onDeleteWork(item.id)}>
                         <Trash2 size={16} /> 삭제
