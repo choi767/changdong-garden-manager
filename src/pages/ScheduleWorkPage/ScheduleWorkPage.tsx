@@ -155,7 +155,7 @@ export default function ScheduleWorkPage() {
                     <div className="timeline-item" key={item.id}>
                       <div>
                         <p>
-                          {item.workDate} · {recordTargetNode(item, appData.workLogs)} · {plantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
+                          {item.workDate} · {recordTargetNode(item, appData.workLogs)} · {plantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: (작업내용> ${item.content})` : ""}
                         </p>
                         <RecordPhotoGallery target={{ recordType: "WORK", recordId: item.id }} photos={photosForWorkRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                       </div>

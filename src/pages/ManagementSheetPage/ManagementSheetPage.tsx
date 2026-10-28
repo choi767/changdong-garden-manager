@@ -1327,7 +1327,7 @@ export default function ManagementSheetPage() {
                   <div className="timeline-item" key={item.id}>
                     <div>
                       <p>
-                        {item.workDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: ${item.content}` : ""}
+                        {item.workDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: (작업내용> ${item.content})` : ""}
                       </p>
                       <RecordPhotoList photos={photosForRecord("WORK", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                       <PhotoAttachmentButton target={{ recordType: "WORK", recordId: item.id }} />
