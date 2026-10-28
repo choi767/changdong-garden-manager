@@ -1147,6 +1147,13 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 .harvest-year-search label { width: 150px; min-width: 0; }
 .harvest-year-search button { flex: 0 0 auto; }
 .harvest-summary-heading { margin-bottom: 12px; }
+.harvest-export-heading { flex-wrap: wrap; }
+.harvest-export-heading h2 { flex: 1 1 auto; }
+.harvest-summary-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex: 0 0 auto; }
+.harvest-export-status { margin: 0; padding: 12px; color: #684900; background: #fff2b8; font-weight: 700; }
+@media (max-width: 600px) {
+  .harvest-summary-actions { flex-direction: column; }
+}
 .harvest-summary-item { border-top: 1px solid var(--line); }
 .harvest-summary-item:last-child { border-bottom: 1px solid var(--line); }
 .harvest-summary-row {
