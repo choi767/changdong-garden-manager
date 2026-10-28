@@ -25,11 +25,17 @@ describe("수확량 엑셀 내보내기", () => {
 
   it("특정 작물만 선택하면 다른 작물과 미지정 기록을 내보내지 않는다", () => {
     const potato = summarizeHarvests(harvestTestData(), 2026).find((plant) => plant.plantId === "potato")!;
-    const workbook = createHarvestWorkbook([potato], 2026, potato.name);
+    const workbook = createHarvestWorkbook([potato], 2026, potato.name, true);
+    expect(workbook.worksheets[0].name).toBe("수확 상세");
     expect(workbook.getWorksheet("수확량 합계")!.rowCount).toBe(6);
     const detail = workbook.getWorksheet("수확 상세")!;
-    expect(detail.rowCount).toBe(9);
-    for (let row = 5; row <= detail.rowCount; row++) expect(detail.getCell(`B${row}`).value).toBe("감자");
+    expect(detail.rowCount).toBe(12);
+    for (let row = 5; row <= 9; row++) expect(detail.getCell(`B${row}`).value).toBe("감자");
+    expect(detail.getCell("A11").value).toBe("합계");
+    expect(detail.getCell("E11").value).toEqual({ formula: 'SUMIFS(E5:E9,B5:B9,"감자",F5:F9,"개")', result: 200 });
+    expect(detail.getCell("E12").value).toEqual({ formula: 'SUMIFS(E5:E9,B5:B9,"감자",F5:F9,"kg")', result: 300 });
+    expect(workbook.getWorksheet("수확량 합계")!.getCell("C6").value).toEqual({ formula: "'수확 상세'!E12", result: 300 });
+    expect(detail.autoFilter).toMatchObject({ to: { row: 9 } });
     expect(workbook.getWorksheet("수확량 합계")!.getCell("A2").value).toBe("2026년 · 감자");
   });
 

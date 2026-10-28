@@ -48,7 +48,7 @@ export default function HarvestOverviewPage() {
     setError("");
     try {
       const { downloadHarvestExcel } = await import("../../utils/harvestExcel");
-      await downloadHarvestExcel(plant ? [plant] : summaries, year, plant?.name ?? "전체");
+      await downloadHarvestExcel(plant ? [plant] : summaries, year, plant?.name ?? "전체", Boolean(plant));
     } catch (err) {
       setError(err instanceof Error ? err.message : "엑셀 파일을 만들지 못했습니다.");
     } finally { setExporting(false); }
@@ -71,7 +71,7 @@ export default function HarvestOverviewPage() {
       <section className="harvest-summary" aria-label={`${year}년 식물별 수확량`}>
         <div className="card-title-row harvest-summary-heading harvest-export-heading">
           <h2>{year}년 수확량</h2><small>{summaries.length}개 품목</small>
-          <button className="secondary-button compact-action" type="button" onClick={() => void onExport()} disabled={exporting || summaries.length === 0}><Download size={16} /> 전체 엑셀 내보내기</button>
+          <button className="secondary-button compact-action harvest-excel-button" type="button" onClick={() => void onExport()} disabled={exporting || summaries.length === 0}><Download size={16} /> 전체 엑셀 내보내기</button>
         </div>
         {summaries.map((summary) => {
           const key = summary.plantId ?? "unassigned";
@@ -82,7 +82,6 @@ export default function HarvestOverviewPage() {
               <div className="harvest-summary-row">
                 <div className="harvest-summary-title"><h3>{summary.name}</h3><p>{formatHarvestTotals(summary.totals)}</p></div>
                 <div className="harvest-summary-actions">
-                <button className="secondary-button compact-action" type="button" onClick={() => void onExport(summary)} disabled={exporting} aria-label={`${summary.name} 엑셀 내보내기`} title={`${summary.name} 엑셀 내보내기`}><Download size={16} /> 엑셀</button>
                 <button className="secondary-button compact-action" type="button" aria-expanded={isExpanded} aria-controls={detailsId} aria-label={`${summary.name} ${isExpanded ? "접기" : "상세보기"}`} onClick={() => {
                   setExpanded((current) => {
                     const next = new Set(current);
@@ -92,6 +91,7 @@ export default function HarvestOverviewPage() {
                 }}>
                   {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}{isExpanded ? "접기" : "상세보기"}
                 </button>
+                <button className="secondary-button compact-action harvest-excel-button" type="button" onClick={() => void onExport(summary)} disabled={exporting} aria-label={`${summary.name} 엑셀 내보내기`} title={`${summary.name} 엑셀 내보내기`}><Download size={16} /> 엑셀</button>
                 </div>
               </div>
               {isExpanded && (

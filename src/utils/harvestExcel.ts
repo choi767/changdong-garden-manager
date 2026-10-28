@@ -29,12 +29,15 @@ export function harvestExportFilename(year: number, scope: string): string {
   return `수확량집계_${year}년_${safeScope}.xlsx`;
 }
 
-export function createHarvestWorkbook(summaries: HarvestPlantSummary[], year: number, scope = "전체"): ExcelJS.Workbook {
+export function createHarvestWorkbook(summaries: HarvestPlantSummary[], year: number, scope = "전체", singleCrop = false): ExcelJS.Workbook {
   if (!summaries.length) throw new Error("내보낼 수확기록이 없습니다.");
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "틀밭 농장 관리";
+  workbook.calcProperties.fullCalcOnLoad = true;
+  const addDetailSheet = () => reportSheet(workbook, "수확 상세", "수확 상세 기록", year, scope, ["수확일", "작물명", "관리그룹", "관리상태", "수확량", "단위", "품질", "메모"], [16, 24, 18, 14, 16, 18, 14, 55]);
+  const firstDetail = singleCrop ? addDetailSheet() : null;
   const summary = reportSheet(workbook, "수확량 합계", "수확량 집계", year, scope, ["작물명", "단위", "수확량 합계"], [26, 18, 22]);
-  const detail = reportSheet(workbook, "수확 상세", "수확 상세 기록", year, scope, ["수확일", "작물명", "관리그룹", "관리상태", "수확량", "단위", "품질", "메모"], [16, 24, 18, 14, 16, 18, 14, 55]);
+  const detail = firstDetail ?? addDetailSheet();
   const details: { date: string; name: string; zone: number; group: number; values: ExcelJS.CellValue[] }[] = [];
   for (const plant of summaries) {
     for (const [unit, quantity] of [...plant.totals].sort(([a], [b]) => a.localeCompare(b, "ko"))) {
@@ -44,19 +47,36 @@ export function createHarvestWorkbook(summaries: HarvestPlantSummary[], year: nu
       for (const record of info.records) {
         details.push({
           date: record.harvestDate, name: plant.name, zone: info.group?.zoneNumber ?? Infinity, group: info.group?.groupNumber ?? Infinity,
-          values: [new Date(`${record.harvestDate}T00:00:00Z`), plant.name, info.group?.displayCode ?? "관리표 없음", info.sheet ? (info.sheet.status === "CLOSED" ? "종료" : "관리중") : "관리표 없음", record.quantity, record.unit.trim().replace(/\s+/g, "").toLowerCase() || "단위 미지정", record.quality, record.notes]
+          values: [new Date(`${record.harvestDate}T00:00:00Z`), plant.name, info.group?.displayCode ?? "관리표 없음", info.sheet ? (info.sheet.status === "CLOSED" ? "종료" : "관리중") : "관리표 없음", record.quantity, record.unit.trim().replace(/\s+/g, "").toLowerCase() || "단위 미지정", record.quality || null, record.notes || null]
         });
       }
     }
   }
   details.sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name, "ko") || a.zone - b.zone || a.group - b.group);
   for (const record of details) detail.addRow(record.values);
+  const lastRecordRow = detail.rowCount;
+  const totalRows: { row: number; summaryRow: number; quantity: number }[] = [];
+  if (singleCrop) {
+    detail.addRow([]);
+    const criterion = (value: string) => value.replace(/~/g, "~~").replace(/\*/g, "~*").replace(/\?/g, "~?").replace(/"/g, '""');
+    let summaryRow = 5;
+    for (const plant of summaries) {
+      for (const [unit, quantity] of [...plant.totals].sort(([a], [b]) => a.localeCompare(b, "ko"))) {
+        const total = Number(quantity.toFixed(10));
+        const row = detail.addRow(["합계", plant.name, null, null, total, unit, null, null]);
+        row.getCell(5).value = { formula: `SUMIFS(E5:E${lastRecordRow},B5:B${lastRecordRow},"${criterion(plant.name)}",F5:F${lastRecordRow},"${criterion(unit)}")`, result: total };
+        summary.getCell(summaryRow, 3).value = { formula: `'수확 상세'!E${row.number}`, result: total };
+        totalRows.push({ row: row.number, summaryRow, quantity: total });
+        summaryRow++;
+      }
+    }
+  }
   for (const sheet of [summary, detail]) {
-    sheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: sheet.rowCount, column: sheet.columnCount } };
+    sheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: sheet === detail ? lastRecordRow : sheet.rowCount, column: sheet.columnCount } };
     for (let index = 5; index <= sheet.rowCount; index++) {
       const row = sheet.getRow(index);
       row.height = sheet === detail ? 34 : 24;
-      row.eachCell((cell) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
         cell.font = { name: "맑은 고딕", size: 11 };
         cell.alignment = { vertical: "middle", wrapText: true };
         if (index % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F5F1" } };
@@ -75,11 +95,19 @@ export function createHarvestWorkbook(summaries: HarvestPlantSummary[], year: nu
       cell.numFmt = Number.isInteger(cell.value) ? "#,##0" : quantityFormat;
     }
   }
+  for (const { row: index, summaryRow, quantity } of totalRows) {
+    detail.getRow(index).eachCell({ includeEmpty: true }, (cell) => {
+      cell.font = { name: "맑은 고딕", size: 11, bold: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDDEFE3" } };
+    });
+    detail.getCell(index, 5).numFmt = Number.isInteger(quantity) ? "#,##0" : quantityFormat;
+    summary.getCell(summaryRow, 3).numFmt = Number.isInteger(quantity) ? "#,##0" : quantityFormat;
+  }
   return workbook;
 }
 
-export async function downloadHarvestExcel(summaries: HarvestPlantSummary[], year: number, scope = "전체") {
-  const workbook = createHarvestWorkbook(summaries, year, scope);
+export async function downloadHarvestExcel(summaries: HarvestPlantSummary[], year: number, scope = "전체", singleCrop = false) {
+  const workbook = createHarvestWorkbook(summaries, year, scope, singleCrop);
   const bytes = await workbook.xlsx.writeBuffer();
   const blob = new Blob([new Uint8Array(bytes)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
