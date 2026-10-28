@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, Trash2 } from "lucide-react";
 import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
 import { useGardenStore } from "../../stores/gardenStore";
+import { formatRecordNote } from "../../utils/recordNotes";
 import type { ScheduleReminder, WorkLog } from "../../domain/entities/models";
 import { getSheetPlantDisplayName } from "../../domain/services/selectors";
 
@@ -131,7 +132,7 @@ export default function ScheduleWorkPage() {
                   {zoneSchedules.map((item) => (
                     <div className="timeline-item" key={item.id}>
                       <p>
-                        {item.dueDate} · {recordTargetNode(item, appData.scheduleReminders ?? [])} · {plantName(item.managementSheetPlantId)} · {item.category}{item.content ? `: ${item.content}` : ""}
+                        {item.dueDate} · {recordTargetNode(item, appData.scheduleReminders ?? [])} · {plantName(item.managementSheetPlantId)} · {item.category}{formatRecordNote("일정내용", item.content, ": ")}
                       </p>
                       <div className="button-row compact">
                         <span className="schedule-badge">예정</span>
@@ -155,7 +156,7 @@ export default function ScheduleWorkPage() {
                     <div className="timeline-item" key={item.id}>
                       <div>
                         <p>
-                          {item.workDate} · {recordTargetNode(item, appData.workLogs)} · {plantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: (작업내용> ${item.content})` : ""}
+                          {item.workDate} · {recordTargetNode(item, appData.workLogs)} · {plantName(item.managementSheetPlantId)} · {item.workType}{formatRecordNote("작업내용", item.content, ": ")}
                         </p>
                         <RecordPhotoGallery target={{ recordType: "WORK", recordId: item.id }} photos={photosForWorkRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                       </div>

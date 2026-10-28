@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
 import { getSheetPlantDisplayName } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
+import { formatRecordNote } from "../../utils/recordNotes";
 
 export default function ObservationOverviewPage() {
   const data = useGardenStore((state) => state.data);
@@ -66,7 +67,7 @@ export default function ObservationOverviewPage() {
                   <div className="timeline-item" key={item.id}>
                     <div>
                       <p>
-                        {item.observedDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)} · {item.content}
+                        {item.observedDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)}{formatRecordNote("관찰내용", item.content, " · ")}
                       </p>
                       <RecordPhotoGallery target={{ recordType: "OBSERVATION", recordId: item.id }} photos={photosForRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                     </div>

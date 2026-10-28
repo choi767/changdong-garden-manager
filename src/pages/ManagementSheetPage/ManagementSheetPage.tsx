@@ -9,6 +9,7 @@ import { getBedLabelList, getCurrentBedsForGroup, getPastBedsForGroup, getSheetP
 import { MAX_SHEET_PLANTS } from "../../domain/services/plantRules";
 import { todayIsoDate } from "../../utils/id";
 import { useGardenStore } from "../../stores/gardenStore";
+import { formatRecordNote } from "../../utils/recordNotes";
 import PhotoAttachmentButton, { PendingPhotoList } from "../../components/common/PhotoAttachmentButton";
 import { prepareRecordPhotos, validatePhotoFiles } from "../../utils/recordPhotos";
 
@@ -98,7 +99,7 @@ function PhotoCard({ photo, plantName, onDelete, onPreview }: { photo: Photo; pl
           <button className="danger-button compact-action" type="button" onClick={onDelete}>사진삭제</button>
         </div>
         <p>{plantName}</p>
-        {photo.description && <p className="photo-description">{photo.description}</p>}
+        {photo.description && <p className="photo-description">{formatRecordNote("사진설명", photo.description)}</p>}
         {!photo.recordType && <PhotoAttachmentButton target={{ recordType: null, recordId: photo.albumId ?? photo.id }} />}
         <small>{formatFileSize(photo.fileSize)}</small>
       </div>
@@ -1302,7 +1303,7 @@ export default function ManagementSheetPage() {
                 {visibleScheduleReminders.map((item) => (
                   <div className="timeline-item" key={item.id}>
                     <p>
-                      {item.dueDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.category}{item.content ? `: ${item.content}` : ""}
+                      {item.dueDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.category}{formatRecordNote("일정내용", item.content, ": ")}
                     </p>
                     <div className="button-row compact">
                       <span className="schedule-badge">예정</span>
@@ -1327,7 +1328,7 @@ export default function ManagementSheetPage() {
                   <div className="timeline-item" key={item.id}>
                     <div>
                       <p>
-                        {item.workDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.workType}{item.content ? `: (작업내용> ${item.content})` : ""}
+                        {item.workDate} · <strong>{group.displayCode}</strong> · {sheetPlantName(item.managementSheetPlantId)} · {item.workType}{formatRecordNote("작업내용", item.content, ": ")}
                       </p>
                       <RecordPhotoList photos={photosForRecord("WORK", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                       <PhotoAttachmentButton target={{ recordType: "WORK", recordId: item.id }} />
@@ -1391,7 +1392,7 @@ export default function ManagementSheetPage() {
             {observationMemos.map((item) => (
               <div className="timeline-item" key={item.id}>
                 <div>
-                  <p>{item.observedDate} · {sheetPlantName(item.managementSheetPlantId)}: {item.content}</p>
+                  <p>{item.observedDate} · {sheetPlantName(item.managementSheetPlantId)}{formatRecordNote("관찰내용", item.content, ": ")}</p>
                   <RecordPhotoList photos={photosForRecord("OBSERVATION", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                   <PhotoAttachmentButton target={{ recordType: "OBSERVATION", recordId: item.id }} />
                 </div>
@@ -1463,7 +1464,7 @@ export default function ManagementSheetPage() {
             {pestRecords.map((item) => (
               <div className="timeline-item" key={item.id}>
                 <div>
-                  <p>{item.detectedDate} · {sheetPlantName(item.managementSheetPlantId)} · {item.pestType}({item.severity}): {item.symptom}{item.action ? ` / ${item.action}` : ""}</p>
+                  <p>{item.detectedDate} · {sheetPlantName(item.managementSheetPlantId)} · {item.pestType}({item.severity}){formatRecordNote("증상", item.symptom, ": ")}{formatRecordNote("조치내용", item.action, " / ")}</p>
                   <RecordPhotoList photos={photosForRecord("PEST", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                   <PhotoAttachmentButton target={{ recordType: "PEST", recordId: item.id }} />
                 </div>
@@ -1529,7 +1530,7 @@ export default function ManagementSheetPage() {
           <div className="modal-panel decision-modal" role="dialog" aria-modal="true" aria-labelledby="schedule-scope-title">
             <h2 id="schedule-scope-title">Zone {group.zoneNumber} 내 모든 활성화 관리표에 같은 일정을 올릴까요?</h2>
             <p>{pendingSchedule.dueDate} · {pendingSchedule.category}</p>
-            {pendingSchedule.content && <p className="muted-text">{pendingSchedule.content}</p>}
+            {pendingSchedule.content && <p className="muted-text">{formatRecordNote("일정내용", pendingSchedule.content)}</p>}
             <div className="button-row">
               <button className="primary-button" type="button" onClick={() => void savePendingSchedule("zone")}>예</button>
               <button className="secondary-button" type="button" onClick={() => void savePendingSchedule("current")}>아니오(현재 관리표에만 저장)</button>
@@ -1551,7 +1552,7 @@ export default function ManagementSheetPage() {
               {" · "}
               {pendingWorkLog.workDates.length}회 저장
             </p>
-            {pendingWorkLog.content && <p className="muted-text">{pendingWorkLog.content}</p>}
+            {pendingWorkLog.content && <p className="muted-text">{formatRecordNote("작업내용", pendingWorkLog.content)}</p>}
             <div className="button-row">
               <button className="primary-button" type="button" onClick={() => void savePendingWorkLog("zone")}>예</button>
               <button className="secondary-button" type="button" onClick={() => void savePendingWorkLog("current")}>아니오(현재 관리표에만 저장)</button>
@@ -1681,7 +1682,7 @@ export default function ManagementSheetPage() {
                   <div>
                     <p>
                       {record.harvestDate} · {sheetPlantName(record.managementSheetPlantId)} · {record.quantity}{record.unit} · {record.quality}
-                      {record.notes ? `: ${record.notes}` : ""}
+                      {formatRecordNote("수확메모", record.notes, ": ")}
                     </p>
                     <RecordPhotoList photos={photosForRecord("HARVEST", record.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                     <PhotoAttachmentButton target={{ recordType: "HARVEST", recordId: record.id }} />
@@ -1809,7 +1810,7 @@ export default function ManagementSheetPage() {
           <div className="timeline">
             {materialUsages.map((item) => (
               <div className="timeline-item" key={item.id}>
-                <p>{item.usedDate} · {item.itemName} · {item.quantity}{item.unit} · {item.cost.toLocaleString()}원{item.memo ? `: ${item.memo}` : ""}</p>
+                <p>{item.usedDate} · {item.itemName} · {item.quantity}{item.unit} · {item.cost.toLocaleString()}원{formatRecordNote("메모", item.memo, ": ")}</p>
                 <button className="danger-button compact-action" type="button" onClick={() => void onDeleteMaterialUsage(item.id)}>삭제</button>
               </div>
             ))}

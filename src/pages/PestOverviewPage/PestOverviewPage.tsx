@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
 import { getSheetPlantDisplayName } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
+import { formatRecordNote } from "../../utils/recordNotes";
 
 export default function PestOverviewPage() {
   const data = useGardenStore((state) => state.data);
@@ -67,8 +68,8 @@ export default function PestOverviewPage() {
                     <div>
                       <p>
                         {item.detectedDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)} · {item.pestType}({item.severity})
-                        {item.symptom ? `: ${item.symptom}` : ""}
-                        {item.action ? ` / ${item.action}` : ""}
+                        {formatRecordNote("증상", item.symptom, ": ")}
+                        {formatRecordNote("조치내용", item.action, " / ")}
                       </p>
                       <RecordPhotoGallery target={{ recordType: "PEST", recordId: item.id }} photos={photosForRecord(item.id)} onDeletePhoto={(photoId) => void onDeletePhoto(photoId)} />
                     </div>

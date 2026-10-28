@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import type { Photo } from "../../domain/entities/models";
 import { getSheetPlantDisplayName } from "../../domain/services/selectors";
 import { useGardenStore } from "../../stores/gardenStore";
+import { formatRecordNote } from "../../utils/recordNotes";
 import PhotoAttachmentButton from "../../components/common/PhotoAttachmentButton";
 
 function PhotoThumb({ photo, onPreview }: { photo: Photo; onPreview: (photo: Photo, url: string) => void }) {
@@ -92,7 +93,7 @@ export default function PhotoOverviewPage() {
                     <PhotoThumb photo={item} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} />
                     <div><p>
                       {item.photoDate} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {plantName(item.managementSheetPlantId)}
-                      {item.description ? ` · ${item.description}` : ""}
+                      {formatRecordNote("사진설명", item.description, " · ")}
                     </p>
                     {(!item.recordType || item.recordId) && <PhotoAttachmentButton target={{ recordType: item.recordType, recordId: item.recordType ? item.recordId! : item.albumId ?? item.id }} />}
                     </div>

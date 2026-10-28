@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useGardenStore } from "../../stores/gardenStore";
+import { formatRecordNote } from "../../utils/recordNotes";
 
 export default function EvaluationOverviewPage() {
   const data = useGardenStore((state) => state.data);
@@ -43,8 +44,8 @@ export default function EvaluationOverviewPage() {
                   <div className="timeline-item" key={item.id}>
                     <p>
                       {item.evaluatedAt} · {info ? <Link className="text-link" to={`/sheets/${info.sheetId}`}>{info.code}</Link> : "관리표 없음"} · {item.rating}
-                      {item.summary ? ` · ${item.summary}` : ""}
-                      {item.improvement ? ` · 개선: ${item.improvement}` : ""}
+                      {formatRecordNote("전체요약", item.summary, " · ")}
+                      {formatRecordNote("다음개선점", item.improvement, " · ")}
                     </p>
                   </div>
                 );

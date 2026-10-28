@@ -5,6 +5,7 @@ import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
 import HarvestExcelPreview, { type HarvestPreviewData } from "../../components/common/HarvestExcelPreview";
 import { formatHarvestTotals, summarizeHarvests, type HarvestPlantSummary } from "../../domain/services/harvestSummary";
 import { useGardenStore } from "../../stores/gardenStore";
+import { formatRecordNote } from "../../utils/recordNotes";
 
 export default function HarvestOverviewPage() {
   const data = useGardenStore((state) => state.data);
@@ -102,7 +103,7 @@ export default function HarvestOverviewPage() {
                         {info.records.map((item) => (
                           <div className="timeline-item" key={item.id}>
                             <div>
-                              <p>{item.harvestDate} · {item.quantity}{item.unit} {item.quality}{item.notes ? `: ${item.notes}` : ""}</p>
+                              <p>{item.harvestDate} · {item.quantity}{item.unit} {item.quality}{formatRecordNote("수확메모", item.notes, ": ")}</p>
                               <RecordPhotoGallery target={{ recordType: "HARVEST", recordId: item.id }} photos={appData.photos.filter((photo) => photo.recordType === "HARVEST" && photo.recordId === item.id)} onDeletePhoto={(id) => void onDelete(id, true)} />
                             </div>
                             <button className="danger-button compact-action" type="button" onClick={() => void onDelete(item.id)}><Trash2 size={16} /> 삭제</button>

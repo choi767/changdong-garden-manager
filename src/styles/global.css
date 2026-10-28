@@ -1444,6 +1444,7 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 }
 .timeline-item p {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .done-text {
   color: var(--muted);
@@ -1519,6 +1520,7 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 }
 .photo-description {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .photo-card small {
   color: var(--muted);
