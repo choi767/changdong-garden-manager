@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import type { HarvestPlantSummary } from "../domain/services/harvestSummary";
+import { createHarvestReport } from "../domain/services/harvestReport";
 
 const quantityFormat = '#,##0.##########';
 
@@ -38,22 +39,12 @@ export function createHarvestWorkbook(summaries: HarvestPlantSummary[], year: nu
   const firstDetail = singleCrop ? addDetailSheet() : null;
   const summary = reportSheet(workbook, "수확량 합계", "수확량 집계", year, scope, ["작물명", "단위", "수확량 합계"], [26, 18, 22]);
   const detail = firstDetail ?? addDetailSheet();
-  const details: { date: string; name: string; zone: number; group: number; values: ExcelJS.CellValue[] }[] = [];
-  for (const plant of summaries) {
-    for (const [unit, quantity] of [...plant.totals].sort(([a], [b]) => a.localeCompare(b, "ko"))) {
-      summary.addRow([plant.name, unit, Number(quantity.toFixed(10))]);
-    }
-    for (const info of plant.sheets) {
-      for (const record of info.records) {
-        details.push({
-          date: record.harvestDate, name: plant.name, zone: info.group?.zoneNumber ?? Infinity, group: info.group?.groupNumber ?? Infinity,
-          values: [new Date(`${record.harvestDate}T00:00:00Z`), plant.name, info.group?.displayCode ?? "관리표 없음", info.sheet ? (info.sheet.status === "CLOSED" ? "종료" : "관리중") : "관리표 없음", record.quantity, record.unit.trim().replace(/\s+/g, "").toLowerCase() || "단위 미지정", record.quality || null, record.notes || null]
-        });
-      }
-    }
-  }
-  details.sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name, "ko") || a.zone - b.zone || a.group - b.group);
-  for (const record of details) detail.addRow(record.values);
+  const report = createHarvestReport(summaries);
+  for (const row of report.totals) summary.addRow([row.plant, row.unit, row.quantity]);
+  for (const row of report.details) detail.addRow([
+    new Date(`${row.date}T00:00:00Z`), row.plant, row.group, row.status,
+    row.quantity, row.unit, row.quality || null, row.notes || null
+  ]);
   const lastRecordRow = detail.rowCount;
   const totalRows: { row: number; summaryRow: number; quantity: number }[] = [];
   if (singleCrop) {

@@ -2,6 +2,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, ChevronUp, Download, Search, Trash2 } from "lucide-react";
 import RecordPhotoGallery from "../../components/common/RecordPhotoGallery";
+import HarvestExcelPreview, { type HarvestPreviewData } from "../../components/common/HarvestExcelPreview";
 import { formatHarvestTotals, summarizeHarvests, type HarvestPlantSummary } from "../../domain/services/harvestSummary";
 import { useGardenStore } from "../../stores/gardenStore";
 
@@ -14,7 +15,7 @@ export default function HarvestOverviewPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [yearError, setYearError] = useState("");
-  const [exporting, setExporting] = useState(false);
+  const [preview, setPreview] = useState<HarvestPreviewData | null>(null);
   const summaries = useMemo(() => data ? summarizeHarvests(data, year) : [], [data, year]);
 
   if (!data) return null;
@@ -42,16 +43,9 @@ export default function HarvestOverviewPage() {
     }
   }
 
-  async function onExport(plant?: HarvestPlantSummary) {
-    if (exporting) return;
-    setExporting(true);
+  function onExport(plant?: HarvestPlantSummary) {
     setError("");
-    try {
-      const { downloadHarvestExcel } = await import("../../utils/harvestExcel");
-      await downloadHarvestExcel(plant ? [plant] : summaries, year, plant?.name ?? "전체", Boolean(plant));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "엑셀 파일을 만들지 못했습니다.");
-    } finally { setExporting(false); }
+    setPreview({ summaries: structuredClone(plant ? [plant] : summaries), year, scope: plant?.name ?? "전체", singleCrop: Boolean(plant) });
   }
 
   return (
@@ -67,11 +61,10 @@ export default function HarvestOverviewPage() {
       </form>
       {yearError && <p className="form-error" role="alert">{yearError}</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      {exporting && <p className="harvest-export-status" role="status">엑셀 파일을 만드는 중입니다...</p>}
       <section className="harvest-summary" aria-label={`${year}년 식물별 수확량`}>
         <div className="card-title-row harvest-summary-heading harvest-export-heading">
           <h2>{year}년 수확량</h2><small>{summaries.length}개 품목</small>
-          <button className="secondary-button compact-action harvest-excel-button" type="button" onClick={() => void onExport()} disabled={exporting || summaries.length === 0}><Download size={16} /> 전체 엑셀 내보내기</button>
+          <button className="secondary-button compact-action harvest-excel-button" type="button" onClick={() => onExport()} disabled={summaries.length === 0}><Download size={16} /> 전체 엑셀 내보내기</button>
         </div>
         {summaries.map((summary) => {
           const key = summary.plantId ?? "unassigned";
@@ -91,7 +84,7 @@ export default function HarvestOverviewPage() {
                 }}>
                   {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}{isExpanded ? "접기" : "상세보기"}
                 </button>
-                <button className="secondary-button compact-action harvest-excel-button" type="button" onClick={() => void onExport(summary)} disabled={exporting} aria-label={`${summary.name} 엑셀 내보내기`} title={`${summary.name} 엑셀 내보내기`}><Download size={16} /> 엑셀</button>
+                <button className="secondary-button compact-action harvest-excel-button" type="button" onClick={() => onExport(summary)} aria-label={`${summary.name} 엑셀 내보내기`} title={`${summary.name} 엑셀 내보내기`}><Download size={16} /> 엑셀</button>
                 </div>
               </div>
               {isExpanded && (
@@ -125,6 +118,7 @@ export default function HarvestOverviewPage() {
         })}
         {summaries.length === 0 && <p className="empty-text">{year}년 수확기록이 없습니다.</p>}
       </section>
+      {preview && <HarvestExcelPreview preview={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }

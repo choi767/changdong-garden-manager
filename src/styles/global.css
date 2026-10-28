@@ -1152,6 +1152,41 @@ button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 .harvest-summary-actions { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
 .harvest-excel-button { background: #17683e; border: 1px solid #125332; color: #fff; }
 .harvest-excel-button:hover:not(:disabled) { background: #10512f; }
+.harvest-excel-preview {
+  width: min(1100px, calc(100vw - 24px));
+  height: min(850px, calc(100dvh - 24px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.harvest-excel-preview:not([open]) { display: none; }
+.harvest-excel-preview::backdrop { background: rgba(14, 31, 22, .55); }
+.harvest-preview-header { padding: 16px; border-bottom: 1px solid var(--line); }
+.harvest-preview-header p { margin: 6px 0 0; overflow-wrap: anywhere; }
+.harvest-preview-tabs { display: flex; padding: 0 12px; gap: 12px; border-bottom: 1px solid var(--line); }
+.harvest-preview-tabs button { padding: 12px 4px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-weight: 700; }
+.harvest-preview-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
+.harvest-preview-scroll { min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; }
+.harvest-preview-scroll table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.harvest-preview-summary-table { min-width: 360px; }
+.harvest-preview-detail-table { min-width: 1050px; }
+.harvest-preview-scroll th, .harvest-preview-scroll td { padding: 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.harvest-preview-scroll thead th { position: sticky; top: 0; z-index: 1; background: #e6f0e9; }
+.harvest-preview-scroll .quantity-cell { text-align: right; font-variant-numeric: tabular-nums; }
+.harvest-preview-scroll .preview-notes { min-width: 240px; max-width: 400px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.harvest-preview-total { background: #ddefe3; font-weight: 700; }
+.harvest-preview-footer { padding: 12px 16px; border-top: 1px solid var(--line); background: #fff; }
+.harvest-preview-footer p { margin: 0 0 10px; }
+.harvest-preview-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.harvest-preview-buttons button { min-height: 44px; }
 .harvest-export-status { margin: 0; padding: 12px; color: #684900; background: #fff2b8; font-weight: 700; }
 .harvest-summary-item { border-top: 1px solid var(--line); }
 .harvest-summary-item:last-child { border-bottom: 1px solid var(--line); }
