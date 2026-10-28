@@ -13,7 +13,7 @@ import PhotoAttachmentButton, { PendingPhotoList } from "../../components/common
 import { prepareRecordPhotos, validatePhotoFiles } from "../../utils/recordPhotos";
 
 const WORK_TYPE_OPTIONS = [
-  ...["가지치기", "로터리", "미생물", "물주기", "방제(살충제)", "방제(살균제)", "방제(토양 벌레잡기)", "솎아내기", "심기(정식)", "잡초제거", "정식전 비료/거름", "줄로묶어주기", "지지대 설치", "추비", "토양살충", "토양살균", "흙 보충"].sort((a, b) => a.localeCompare(b, "ko")),
+  ...["가지치기", "로터리", "미생물", "물주기", "방제(살충제)", "방제(살균제)", "방제(토양 벌레잡기)", "방제(토양살충)", "방제(토양살균)", "비료(밭준비)", "비료(추비)", "비료(퇴비)", "솎아내기", "심기(묘종)", "심기(파종)", "잡초제거", "줄로묶어주기", "지지대 설치", "흙 보충"].sort((a, b) => a.localeCompare(b, "ko")),
   "직접입력"
 ];
 const PHOTO_MAX_SIDE = 1280;
