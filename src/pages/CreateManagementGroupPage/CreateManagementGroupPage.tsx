@@ -231,16 +231,8 @@ export default function CreateManagementGroupPage() {
         <label>
           관리 시작일
           <input
-            type={startDate ? "date" : "text"}
+            type="date"
             value={startDate}
-            placeholder="- - -"
-            onFocus={(event) => {
-              event.currentTarget.type = "date";
-              event.currentTarget.showPicker?.();
-            }}
-            onBlur={(event) => {
-              if (!event.currentTarget.value) event.currentTarget.type = "text";
-            }}
             onChange={(event) => setStartDate(event.target.value)}
           />
         </label>
