@@ -12,6 +12,7 @@ import { useGardenStore } from "../../stores/gardenStore";
 import { formatRecordNote } from "../../utils/recordNotes";
 import PhotoAttachmentButton, { PendingPhotoList } from "../../components/common/PhotoAttachmentButton";
 import { prepareRecordPhotos, validatePhotoFiles } from "../../utils/recordPhotos";
+import RecordEditDialog, { type RecordEditTarget } from "../../components/common/RecordEditDialog";
 
 const WORK_TYPE_OPTIONS = [
   ...["가지치기", "두둑만들기", "로터리", "멀칭", "미생물", "물주기", "방제(살충제)", "방제(살균제)", "방제(토양 벌레잡기)", "방제(토양살충)", "방제(토양살균)", "비료(밭준비)", "비료(추비)", "비료(퇴비)", "솎아내기", "심기(묘종)", "심기(파종)", "잡초매트", "잡초제거", "제초제", "줄로묶어주기", "지지대 설치", "흙 보충"].sort((a, b) => a.localeCompare(b, "ko")),
@@ -73,7 +74,7 @@ function buildWorkDates(startDate: string, repeatUnit: WorkRepeatUnit, repeatEve
   return dates;
 }
 
-function PhotoCard({ photo, plantName, onDelete, onPreview }: { photo: Photo; plantName: string; onDelete: () => void; onPreview: (photo: Photo, url: string) => void }) {
+function PhotoCard({ photo, plantName, onDelete, onPreview, onEdit }: { photo: Photo; plantName: string; onDelete: () => void; onPreview: (photo: Photo, url: string) => void; onEdit: () => void }) {
   const [imageUrl, setImageUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
 
@@ -96,7 +97,10 @@ function PhotoCard({ photo, plantName, onDelete, onPreview }: { photo: Photo; pl
       <div>
         <div className="card-title-row">
           <strong>{photo.photoDate}</strong>
-          <button className="danger-button compact-action" type="button" onClick={onDelete}>사진삭제</button>
+          <div className="button-row compact">
+            <button className="secondary-button compact-action" type="button" onClick={onEdit}>수정</button>
+            <button className="danger-button compact-action" type="button" onClick={onDelete}>사진삭제</button>
+          </div>
         </div>
         <p>{plantName}</p>
         {photo.description && <p className="photo-description">{formatRecordNote("사진설명", photo.description)}</p>}
@@ -146,6 +150,7 @@ function compareRecentFirst(aDate: string, aCreatedAt: string, bDate: string, bC
 }
 
 export default function ManagementSheetPage() {
+  const [editTarget, setEditTarget] = useState<RecordEditTarget | null>(null);
   const { sheetId } = useParams();
   const data = useGardenStore((state) => state.data);
   const addBedsToGroup = useGardenStore((state) => state.addBedsToGroup);
@@ -946,6 +951,9 @@ export default function ManagementSheetPage() {
 
   return (
     <div className="page sheet-page">
+      {editTarget && <RecordEditDialog key={`${editTarget.kind}:${editTarget.id}`} target={editTarget}
+        plants={sheetPlants.map((item) => ({ id: item.id, name: sheetPlantName(item.id) }))}
+        onClose={() => setEditTarget(null)} />}
       <header className="page-header sheet-fixed-top">
         <div>
           <p className="eyebrow">관리표 상세</p>
@@ -1307,6 +1315,7 @@ export default function ManagementSheetPage() {
                     </p>
                     <div className="button-row compact">
                       <span className="schedule-badge">예정</span>
+                      <button className="secondary-button compact-action" type="button" onClick={() => setEditTarget({ kind: "scheduleReminders", id: item.id })}>수정</button>
                       <button className="secondary-button compact-action" type="button" onClick={() => void onCompleteSchedule(item.id)}>완료</button>
                       <button className="danger-button compact-action" type="button" onClick={() => void onDeleteSchedule(item.id)}>삭제</button>
                     </div>
@@ -1333,7 +1342,10 @@ export default function ManagementSheetPage() {
                       <RecordPhotoList photos={photosForRecord("WORK", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                       <PhotoAttachmentButton target={{ recordType: "WORK", recordId: item.id }} />
                     </div>
-                    <button className="danger-button compact-action" type="button" onClick={() => void onDeleteWorkLog(item.id)}>삭제</button>
+                    <div className="button-row compact">
+                      <button className="secondary-button compact-action" type="button" onClick={() => setEditTarget({ kind: "workLogs", id: item.id })}>수정</button>
+                      <button className="danger-button compact-action" type="button" onClick={() => void onDeleteWorkLog(item.id)}>삭제</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1396,7 +1408,10 @@ export default function ManagementSheetPage() {
                   <RecordPhotoList photos={photosForRecord("OBSERVATION", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                   <PhotoAttachmentButton target={{ recordType: "OBSERVATION", recordId: item.id }} />
                 </div>
-                <button className="danger-button compact-action" type="button" onClick={() => void onDeleteObservation(item.id)}>삭제</button>
+                <div className="button-row compact">
+                  <button className="secondary-button compact-action" type="button" onClick={() => setEditTarget({ kind: "observationMemos", id: item.id })}>수정</button>
+                  <button className="danger-button compact-action" type="button" onClick={() => void onDeleteObservation(item.id)}>삭제</button>
+                </div>
               </div>
             ))}
           </div>
@@ -1468,7 +1483,10 @@ export default function ManagementSheetPage() {
                   <RecordPhotoList photos={photosForRecord("PEST", item.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                   <PhotoAttachmentButton target={{ recordType: "PEST", recordId: item.id }} />
                 </div>
-                <button className="danger-button compact-action" type="button" onClick={() => void onDeletePestRecord(item.id)}>삭제</button>
+                <div className="button-row compact">
+                  <button className="secondary-button compact-action" type="button" onClick={() => setEditTarget({ kind: "pestRecords", id: item.id })}>수정</button>
+                  <button className="danger-button compact-action" type="button" onClick={() => void onDeletePestRecord(item.id)}>삭제</button>
+                </div>
               </div>
             ))}
           </div>
@@ -1687,7 +1705,10 @@ export default function ManagementSheetPage() {
                     <RecordPhotoList photos={photosForRecord("HARVEST", record.id)} onPreview={(photo, url) => setPreviewPhoto({ photo, url })} onDelete={(photoId) => void onDeletePhoto(photoId)} />
                     <PhotoAttachmentButton target={{ recordType: "HARVEST", recordId: record.id }} />
                   </div>
-                  <button className="danger-button compact-action" type="button" onClick={() => void onDeleteHarvestRecord(record.id)}>삭제</button>
+                  <div className="button-row compact">
+                    <button className="secondary-button compact-action" type="button" onClick={() => setEditTarget({ kind: "harvestRecords", id: record.id })}>수정</button>
+                    <button className="danger-button compact-action" type="button" onClick={() => void onDeleteHarvestRecord(record.id)}>삭제</button>
+                  </div>
                 </div>
               );
             })}
@@ -1747,6 +1768,7 @@ export default function ManagementSheetPage() {
               <PhotoCard
                 key={photo.id}
                 photo={photo}
+                onEdit={() => setEditTarget({ kind: "photos", id: photo.id })}
                 plantName={sheetPlantName(photo.managementSheetPlantId)}
                 onPreview={(photo, url) => setPreviewPhoto({ photo, url })}
                 onDelete={() => void onDeletePhoto(photo.id)}
@@ -1811,15 +1833,19 @@ export default function ManagementSheetPage() {
             {materialUsages.map((item) => (
               <div className="timeline-item" key={item.id}>
                 <p>{item.usedDate} · {item.itemName} · {item.quantity}{item.unit} · {item.cost.toLocaleString()}원{formatRecordNote("메모", item.memo, ": ")}</p>
-                <button className="danger-button compact-action" type="button" onClick={() => void onDeleteMaterialUsage(item.id)}>삭제</button>
+                <div className="button-row compact">
+                  <button className="secondary-button compact-action" type="button" onClick={() => setEditTarget({ kind: "materialUsages", id: item.id })}>수정</button>
+                  <button className="danger-button compact-action" type="button" onClick={() => void onDeleteMaterialUsage(item.id)}>삭제</button>
+                </div>
               </div>
             ))}
           </div>
           {materialUsages.length === 0 && <p className="empty-text">등록된 비용/자재사용 기록이 없습니다.</p>}
         </form>
 
-        <form className="panel form-stack" onSubmit={onSaveEvaluation}>
+        <form className="panel form-stack" onSubmit={onSaveEvaluation} key={evaluation?.updatedAt ?? "new-evaluation"}>
           <h2>요약/평가</h2>
+          {evaluation && <button className="secondary-button compact-action" type="button" onClick={() => setEditTarget({ kind: "sheetEvaluations", id: evaluation.id })}>수정</button>}
           <div className="record-grid">
             <label>
               평가일

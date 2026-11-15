@@ -1,3 +1,4 @@
+import { makeRecordPatch, type EditableRecordKind } from "../domain/services/recordEditing";
 import { create } from "zustand";
 import type { AppData, Bed, HarvestRecord, ManagementGroup, ManagementSheet, ManagementSheetPlant, MaterialUsage, ObservationMemo, PestRecord, Photo, Plant, PlantImage, ScheduleReminder, SheetEvaluation, StatusHistory, WorkLog } from "../domain/entities/models";
 import { createGardenRepository } from "../infrastructure/repositories/gardenRepositoryFactory";
@@ -74,6 +75,7 @@ interface Notice {
 }
 
 interface GardenState {
+  updateSheetRecord: (kind: EditableRecordKind, recordId: string, values: Record<string, string>) => Promise<void>;
   data: AppData | null;
   notice: Notice | null;
   loading: boolean;
@@ -280,6 +282,35 @@ function makeAttachedPhoto(
 }
 
 export const useGardenStore = create<GardenState>((set, get) => ({
+  async updateSheetRecord(kind, recordId, values) {
+    await persistMutation(set, () => get().data, "기록을 수정했습니다.", (data) => {
+      const records = data[kind];
+      const index = records.findIndex((item) => item.id === recordId);
+      const original = records[index];
+      if (!original) throw new Error("수정할 기록을 찾을 수 없습니다.");
+      const patch = makeRecordPatch(data, kind, original.managementSheetId, values);
+      const work = kind === "workLogs" ? data.workLogs.find((item) => item.id === recordId) : null;
+      if (work?.batchId) {
+        // Plant links belong to each sheet; only shared work fields span the batch.
+        const sharedPatch = {
+          workDate: String(patch.workDate), workType: String(patch.workType),
+          content: String(patch.content), author: String(patch.author)
+        };
+        const timestamp = nowIso();
+        data.workLogs = data.workLogs.map((item) => item.batchId === work.batchId
+          ? { ...item, ...sharedPatch, updatedAt: timestamp } : item);
+        return;
+      }
+      // Replace objects so a failed save cannot change the currently displayed data.
+      Object.assign(records, { [index]: { ...original, ...patch, ...(kind === "photos" ? {} : { updatedAt: nowIso() }) } });
+      const recordType = kind === "workLogs" ? "WORK" : kind === "observationMemos" ? "OBSERVATION"
+        : kind === "pestRecords" ? "PEST" : kind === "harvestRecords" ? "HARVEST" : null;
+      if (recordType) {
+        data.photos = data.photos.map((photo) => photo.recordType === recordType && photo.recordId === recordId
+          ? { ...photo, managementSheetPlantId: patch.managementSheetPlantId as string | null } : photo);
+      }
+    });
+  },
   data: null,
   notice: null,
   loading: false,
